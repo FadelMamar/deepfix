@@ -8,14 +8,9 @@ This module provides integrations with popular MLOps tools:
 - Research assistant for academic paper search
 """
 
-from .mlflow_client import MLflowClient
-from .deepchecks_runner import DeepchecksRunner
-from .dvc_manager import DVCManager
-from .research_assistant import ResearchAssistant
+from .deepchecks import DeepchecksRunner
+
 
 __all__ = [
-    "MLflowClient",
     "DeepchecksRunner",
-    "DVCManager", 
-    "ResearchAssistant"
 ]

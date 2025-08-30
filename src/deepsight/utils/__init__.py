@@ -7,18 +7,12 @@ This module contains shared utility functions and classes including:
 - Input validation and sanitization
 - Common helper functions
 """
-
-from .config import load_config, save_config, get_default_config
+from .config import DeepchecksConfig
 from .logging import setup_logging, get_logger
-from .validators import validate_model_uri, validate_config, ValidationError
 
 __all__ = [
-    "load_config",
-    "save_config", 
-    "get_default_config",
+    "DeepchecksConfig",
     "setup_logging",
     "get_logger",
-    "validate_model_uri",
-    "validate_config",
-    "ValidationError"
+
 ]

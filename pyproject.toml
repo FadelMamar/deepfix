@@ -5,10 +5,18 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "anywidget>=0.9.18",
+    "datasets>=4.0.0",
     "deepchecks[vision]>=0.19.1",
     "dvc>=3.62.0",
+    "fiftyone==1.7.0",
+    "huggingface-hub>=0.34.4",
     "mlflow>=3.3.2",
+    "notebook>=7.4.5",
+    "omegaconf>=2.3.0",
     "pydantic>=2.11.7",
+    "pytest>=8.4.1",
+    "rich>=14.1.0",
     "torch==2.8.0",
     "torchvision>=0.21.0",
     "typer>=0.16.1",
