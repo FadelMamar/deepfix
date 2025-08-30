@@ -18,6 +18,7 @@ from enum import Enum
 from io import BytesIO
 from PIL import Image
 from pydantic import BaseModel,Field
+import traceback
 
 from ..utils.config import DeepchecksConfig
 from ..utils.logging import get_logger
@@ -39,7 +40,7 @@ class ResultHeaders(Enum):
 
 class ParsedResult(BaseModel):
     header: ResultHeaders = Field(description="Header of the result")
-    display_image: List[Image.Image] = Field(description="Display image of the result")
+    display_image: List[bytes] = Field(description="Display image of the result")
     display_txt: str = Field(description="Display text of the result")
     json_result: Dict[str,Any] = Field(description="JSON result of the result")
 
@@ -57,7 +58,7 @@ class CheckResultsParser:
             image = parsed_displays[header]['image']
             txt = parsed_displays[header]['txt']
             r = ParsedResult(header=header, 
-                            display_image=image, 
+                            display_image=image.tobytes(), 
                             display_txt=txt,
                             json_result=parsed_txts[header])
             parsed_results.append(r)
@@ -104,9 +105,7 @@ class CheckResultsParser:
 class DeepchecksRunner:
     """
     Deepchecks integration for automated model validation and testing.
-    
-    Provides high-level interface for running Deepchecks suites and custom
-    checks specifically designed for overfitting detection in CV models.
+    Provides high-level interface for running Deepchecks suites.
     """
     
     def __init__(self, config: Optional[DeepchecksConfig] = None):
@@ -114,7 +113,7 @@ class DeepchecksRunner:
         Initialize Deepchecks runner with configuration.
         """
         self.config = config or DeepchecksConfig()
-
+        self.parser = CheckResultsParser()
         self.suite_train_test_validation = train_test_validation()
         self.suite_data_integrity = data_integrity()
         self.suite_model_evaluation = model_evaluation()
@@ -156,6 +155,14 @@ class DeepchecksRunner:
                 output_path = self.output_dir / f"{name}.{self.config.save_results_format}"
                 self.save_results(result, str(output_path), output_format=self.config.save_results_format)
                 LOGGER.info(f"Results saved to {output_path} in {self.config.save_results_format} format")
+        
+        if self.config.parse_results:
+            try:
+                for name, result in output.items():
+                    output[name] = self.parser.run(result)
+            except Exception:
+                LOGGER.error(f"Error parsing results: {traceback.format_exc()}")
+        
         return output
         
     def run_suite_train_test_validation(self, 

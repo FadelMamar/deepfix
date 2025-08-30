@@ -23,6 +23,7 @@ class DeepchecksConfig(BaseModel):
     save_results_format: Literal["json", "html"] = Field(default="json",description="Format to save the results")
     output_dir: Optional[str] = Field(default=None,description="Output directory to save the results")
     save_display: bool = Field(default=False,description="Whether to save the display")
+    parse_results: bool = Field(default=False,description="Whether to parse the results")
 
 class DVCConfig(BaseModel):
     remote: str = Field(default="origin")

@@ -4,6 +4,7 @@ from torchvision import transforms as T
 import numpy as np
 from tqdm import tqdm
 from itertools import chain
+from collections import OrderedDict
 
 def get_label_mapping():
     ing2name = {}
@@ -12,7 +13,8 @@ def get_label_mapping():
         for n,ing in zip(d['Artikelnummer'],d['Artikel']):
             if n not in ing2name:
                 ing2name[n] = str(ing).lower().strip().replace(' ','_')
-    ing2label = {k:i for i,k in enumerate(ing2name.keys())}
+    ing2name = OrderedDict(sorted(ing2name.items()))
+    ing2label = OrderedDict({k:i for i,k in enumerate(ing2name.keys())})
     return ing2name, ing2label
 
 def create_classification_dataset(ing2label:dict,split='train',image_size:int=1024):
