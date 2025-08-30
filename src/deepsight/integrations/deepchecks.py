@@ -11,18 +11,95 @@ This module provides comprehensive Deepchecks integration including:
 from typing import Dict, List, Optional, Any, Union, Tuple
 from deepchecks.vision.suites import train_test_validation,data_integrity,model_evaluation
 from deepchecks.vision import VisionData
-from deepchecks.core.suite import SuiteResult
-from deepchecks.core.checks import CheckResult
+from deepchecks.core import SuiteResult,CheckResult,CheckFailure
 import json
 from pathlib import Path
 from enum import Enum
 from io import BytesIO
 from PIL import Image
+from pydantic import BaseModel,Field
 
 from ..utils.config import DeepchecksConfig
 from ..utils.logging import get_logger
 
 LOGGER = get_logger(__name__)
+
+class ResultHeaders(Enum):
+    # Train-Test Validation
+    LabelDrift = "Label Drift"
+    ImageDatasetDrift = "Image Dataset Drift"
+    ImagePropertyDrift = "Image Property Drift"
+    PropertyLabelCorrelationChange = "Property Label Correlation Change"
+    HeatmapComparison = "Heatmap Comparison"
+    NewLabels = "New Labels"
+    # Data Integrity
+    ImagePropertyOutliers = "Image Property Outliers"
+    PropertyLabelCorrelation = "Property Label Correlation"
+    LabelPropertyOutliers = "Label Property Outliers"
+
+class ParsedResult(BaseModel):
+    header: ResultHeaders = Field(description="Header of the result")
+    display_image: List[Image.Image] = Field(description="Display image of the result")
+    display_txt: str = Field(description="Display text of the result")
+    json_result: Dict[str,Any] = Field(description="JSON result of the result")
+
+class CheckResultsParser:
+
+    def __init__(self, ):
+        self.results: Optional[SuiteResult] = None
+    
+    def run(self,results:SuiteResult)->List[ParsedResult]:
+        parsed_txts = self.parse_txt(results)
+        parsed_displays = self.parse_display(results)
+        parsed_results = []
+
+        for header in parsed_txts.keys():
+            image = parsed_displays[header]['image']
+            txt = parsed_displays[header]['txt']
+            r = ParsedResult(header=header, 
+                            display_image=image, 
+                            display_txt=txt,
+                            json_result=parsed_txts[header])
+            parsed_results.append(r)
+
+        return parsed_results
+
+    def parse_txt(self)->Dict[ResultHeaders,Dict[str,Any]]:
+        parsed_results = {}
+        for result in self.results.results:
+            header = ResultHeaders(result.get_metadata().get('header'))
+            parsed_results[header] = json.loads(result.to_json(with_display=False))
+        return parsed_results
+    
+    def parse_display(self,result:CheckResult|CheckFailure)->Dict[ResultHeaders,Dict[str,Union[List[Image.Image],str]]]:
+        if isinstance(result,CheckFailure):
+            return None
+        if not result.have_display():
+            return None
+
+        display_result = {}
+        header = ResultHeaders(result.get_metadata().get('header'))
+        image,txt = self._parse_display(result)
+        display_result[header] = {'image':image, 'txt':txt}
+        return display_result
+
+    def _load_display_as_image(self,result:CheckResult)-> List[Image.Image]:
+        images = []
+        for d in result.display:
+            if hasattr(d,'to_image'):
+                image = BytesIO(d.to_image())
+                images.append(Image.open(image))
+        return images
+    
+    def _parse_display_txt(self,result:CheckResult)->List[str]:
+        txts = [d.replace("<span>","").replace("</span>","") for d in result.display if isinstance(d,str)]
+        txts = " ".join(txts)
+        return txts
+    
+    def _parse_display(self,result:CheckResult)->Tuple[List[Image.Image],str]:
+        images = self._load_display_as_image(result)
+        txt = self._parse_display_txt(result)
+        return images,txt
 
 class DeepchecksRunner:
     """
@@ -42,7 +119,6 @@ class DeepchecksRunner:
         self.suite_data_integrity = data_integrity()
         self.suite_model_evaluation = model_evaluation()
         self.output_dir = Path(self.config.output_dir or 'results')
-        
     
     def save_results(self, results: SuiteResult, output_path: str,output_format: str = "json")->None:
         if output_format == "json":
@@ -107,81 +183,4 @@ class DeepchecksRunner:
         max_samples=self.config.max_samples,
         random_state=self.config.random_state)
 
-
-class ResultHeaders(Enum):
-    LabelDrift = "Label Drift"
-    ImageDatasetDrift = "Image Dataset Drift"
-    ImagePropertyDrift = "Image Property Drift"
-    PropertyLabelCorrelationChange = "Property Label Correlation Change"
-    HeatmapComparison = "Heatmap Comparison"
-    NewLabels = "New Labels"
-    
-
-
-class CheckResultsParser:
-
-    def __init__(self, results: SuiteResult):
-        self.results = results
-
-    def parse_txt(self):
-        parsed_results = {}
-        for result in self.results.results:
-            header = result.get_metadata().get('header')
-            parsed_results[header] = json.loads(result.to_json(with_display=False))
-        return parsed_results
-    
-    def parse_display(self,result:CheckResult)->Dict[ResultHeaders,Dict[str,Union[List[Image.Image],str]]]:
-        if not result.have_display():
-            return None
-
-        display_result = {}
-        
-        if result.get_metadata().get('header') == ResultHeaders.LabelDrift.value:
-            image,txt = self._parse_display(result)
-            display_result[ResultHeaders.LabelDrift] = {'image':image, 'txt':txt}
-
-        elif result.get_metadata().get('header') == ResultHeaders.ImageDatasetDrift.value:
-            image,txt = self._parse_display(result)
-            display_result[ResultHeaders.ImageDatasetDrift] = {'image':image, 'txt':txt}
-
-        elif result.get_metadata().get('header') == ResultHeaders.ImagePropertyDrift.value:
-            image,txt = self._parse_display(result)
-            display_result[ResultHeaders.ImagePropertyDrift] = {'image':image, 'txt':txt}
-
-        elif result.get_metadata().get('header') == ResultHeaders.PropertyLabelCorrelationChange.value:
-            image,txt = self._parse_display(result)
-            display_result[ResultHeaders.PropertyLabelCorrelationChange] = {'image':image, 'txt':txt}
-
-        elif result.get_metadata().get('header') == ResultHeaders.HeatmapComparison.value:
-            image,txt = self._parse_display(result)
-            display_result[ResultHeaders.HeatmapComparison] = {'image':image, 'txt':txt}
-
-        elif result.get_metadata().get('header') == ResultHeaders.NewLabels.value:
-            image,txt = self._parse_display(result)
-            display_result[ResultHeaders.NewLabels] = {'image':image, 'txt':txt}
-        
-        else:
-            raise ValueError(f"Unknown header: {result.get_metadata().get('header')}")
-
-        return display_result
-
-    def _load_display_as_image(self,result:CheckResult)-> List[Image.Image]:
-        images = []
-        for d in result.display:
-            if hasattr(d,'to_image'):
-                image = BytesIO(d.to_image())
-                images.append(Image.open(image))
-        return images
-    
-    def _parse_display_txt(self,result:CheckResult)->List[str]:
-        txts = [d.replace("<span>","").replace("</span>","") for d in txts if isinstance(d,str)]
-        txts = " ".join(txts)
-        return txts
-    
-    def _parse_display(self,result:CheckResult)->Tuple[List[Image.Image],str]:
-        images = self._load_display_as_image(result)
-        txt = self._parse_display_txt(result)
-        return images,txt
-
-    
-    
+  
