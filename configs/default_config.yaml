@@ -1,0 +1,68 @@
+# DeepSight MLOps Copilot - Default Configuration
+# This file contains the default configuration settings for the DeepSight copilot
+
+# MLflow Configuration
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  experiment_name: "cv_model_analysis"
+  registry_uri: null
+
+# DVC Configuration  
+dvc:
+  remote: "origin"
+  data_path: "data/"
+  repo_path: null
+
+# Deepchecks Configuration
+deepchecks:
+  suite: "computer_vision"
+  custom_checks:
+    - "overfitting_analysis"
+    - "data_drift_detection"
+    - "performance_degradation"
+  timeout: 300
+
+# Research Assistant Configuration
+research:
+  sources: 
+    - "arxiv"
+    - "semantic_scholar"
+  max_papers: 10
+  keywords:
+    - "overfitting"
+    - "computer vision"
+    - "regularization"
+    - "deep learning"
+  cache_dir: "~/.deepsight/research_cache"
+
+# Overfitting Detection Configuration
+detection:
+  thresholds:
+    train_val_gap: 0.1          # Maximum acceptable train-val performance gap
+    learning_curve_slope: 0.05   # Minimum slope for learning curve divergence
+    stability_threshold: 0.02    # Threshold for performance stability
+    performance_drop: 0.05       # Threshold for performance degradation
+  metrics:
+    - "accuracy"
+    - "loss" 
+    - "f1_score"
+    - "precision"
+    - "recall"
+  cross_validation:
+    folds: 5
+    stratified: true
+
+# Output Configuration
+output:
+  format:
+    - "html"
+    - "pdf"
+  template: "default"
+  include_visualizations: true
+  output_dir: "./deepsight_output"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: null
