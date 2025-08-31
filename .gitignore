@@ -218,6 +218,11 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# MLflow
+mlruns/
+mlflow.db
+
+
 # Marimo
 marimo/_static/
 marimo/_lsp/

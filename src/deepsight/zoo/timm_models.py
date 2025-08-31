@@ -8,7 +8,7 @@ from typing import List
 def get_timm_model(model_name: str,pretrained: bool = True,num_classes: int = 10)->torch.nn.Module:
     model = timm.create_model(model_name, pretrained=pretrained,num_classes=num_classes)
     transform = timm.data.create_transform(**timm.data.resolve_model_data_config(model))
-    trfs = [t for t in transform.transforms if isinstance(t,(T.Normalize,T.Resize,T.ToTensor))]
+    trfs = [t for t in transform.transforms if isinstance(t,(T.Normalize,T.Resize))]
     model = torch.nn.Sequential(*trfs,model)
     return model
 

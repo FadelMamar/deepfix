@@ -14,82 +14,79 @@ from deepchecks.vision import VisionData
 from deepchecks.core import SuiteResult,CheckResult,CheckFailure
 import json
 from pathlib import Path
-from enum import Enum
-from io import BytesIO
-from PIL import Image
-from pydantic import BaseModel,Field
 import traceback
+import base64
 
 from ..utils.config import DeepchecksConfig
 from ..utils.logging import get_logger
+from ..core.artifacts.datamodel import DeepchecksParsedResult,DeepchecksResultHeaders,DeepchecksArtifact
 
 LOGGER = get_logger(__name__)
 
-class ResultHeaders(Enum):
-    # Train-Test Validation
-    LabelDrift = "Label Drift"
-    ImageDatasetDrift = "Image Dataset Drift"
-    ImagePropertyDrift = "Image Property Drift"
-    PropertyLabelCorrelationChange = "Property Label Correlation Change"
-    HeatmapComparison = "Heatmap Comparison"
-    NewLabels = "New Labels"
-    # Data Integrity
-    ImagePropertyOutliers = "Image Property Outliers"
-    PropertyLabelCorrelation = "Property Label Correlation"
-    LabelPropertyOutliers = "Label Property Outliers"
-
-class ParsedResult(BaseModel):
-    header: ResultHeaders = Field(description="Header of the result")
-    display_image: List[bytes] = Field(description="Display image of the result")
-    display_txt: str = Field(description="Display text of the result")
-    json_result: Dict[str,Any] = Field(description="JSON result of the result")
 
 class CheckResultsParser:
 
-    def __init__(self, ):
-        self.results: Optional[SuiteResult] = None
-    
-    def run(self,results:SuiteResult)->List[ParsedResult]:
+    def run(self,results:SuiteResult)->List[DeepchecksParsedResult]:
+
         parsed_txts = self.parse_txt(results)
         parsed_displays = self.parse_display(results)
         parsed_results = []
-
-        for header in parsed_txts.keys():
-            image = parsed_displays[header]['image']
-            txt = parsed_displays[header]['txt']
-            r = ParsedResult(header=header, 
-                            display_image=image.tobytes(), 
-                            display_txt=txt,
+        keys = list(parsed_txts.keys())
+        keys.extend(parsed_displays.keys())
+        keys = list(set(keys))
+        for header in keys:
+            if header in parsed_displays.keys():
+                display_images = [base64.b64encode(i).decode('utf-8') for i in parsed_displays[header]['images']]
+                display_txt = parsed_displays[header]['txt']
+            else:
+                display_images = None
+                display_txt = None
+            r = DeepchecksParsedResult(header=header, 
+                            display_images=display_images, 
+                            display_txt=display_txt,
                             json_result=parsed_txts[header])
             parsed_results.append(r)
-
         return parsed_results
 
-    def parse_txt(self)->Dict[ResultHeaders,Dict[str,Any]]:
+    def parse_txt(self,results:SuiteResult)->Dict[DeepchecksResultHeaders,Dict[str,Any]]:
         parsed_results = {}
-        for result in self.results.results:
-            header = ResultHeaders(result.get_metadata().get('header'))
+        for result in results.results:
+            header = DeepchecksResultHeaders(result.get_metadata().get('header'))
+            if header == DeepchecksResultHeaders.HeatmapComparison:
+                json_result = json.loads(result.to_json(with_display=False))
+                json_result['value'].pop('diff')
+                parsed_results[header] = json_result
+                continue
             parsed_results[header] = json.loads(result.to_json(with_display=False))
         return parsed_results
     
-    def parse_display(self,result:CheckResult|CheckFailure)->Dict[ResultHeaders,Dict[str,Union[List[Image.Image],str]]]:
-        if isinstance(result,CheckFailure):
-            return None
-        if not result.have_display():
-            return None
-
+    def parse_display(self,results:SuiteResult)->Dict[DeepchecksResultHeaders,Dict[str,Union[List[bytes],str]]]:
         display_result = {}
-        header = ResultHeaders(result.get_metadata().get('header'))
-        image,txt = self._parse_display(result)
-        display_result[header] = {'image':image, 'txt':txt}
-        return display_result
+        for result in results.results:
+            if isinstance(result,CheckFailure):
+                continue
+            if not result.have_display():
+                continue
 
-    def _load_display_as_image(self,result:CheckResult)-> List[Image.Image]:
+            header = DeepchecksResultHeaders(result.get_metadata().get('header'))
+            images,txt = self._parse_display(result)
+
+            if header in [DeepchecksResultHeaders.ImagePropertyOutliers, DeepchecksResultHeaders.NewLabels]:
+                txt = None    
+
+            display_result[header] = {'images':images, 'txt':txt}
+        return display_result
+    
+    def _parse_display(self,result:CheckResult)->Tuple[List[bytes],str]:
+        images = self._load_display_as_image(result)
+        txt = self._parse_display_txt(result)
+        return images,txt
+
+    def _load_display_as_image(self,result:CheckResult)-> List[bytes]:
         images = []
         for d in result.display:
             if hasattr(d,'to_image'):
-                image = BytesIO(d.to_image())
-                images.append(Image.open(image))
+                images.append(d.to_image())
         return images
     
     def _parse_display_txt(self,result:CheckResult)->List[str]:
@@ -97,11 +94,6 @@ class CheckResultsParser:
         txts = " ".join(txts)
         return txts
     
-    def _parse_display(self,result:CheckResult)->Tuple[List[Image.Image],str]:
-        images = self._load_display_as_image(result)
-        txt = self._parse_display_txt(result)
-        return images,txt
-
 class DeepchecksRunner:
     """
     Deepchecks integration for automated model validation and testing.
@@ -114,56 +106,47 @@ class DeepchecksRunner:
         """
         self.config = config or DeepchecksConfig()
         self.parser = CheckResultsParser()
+        
         self.suite_train_test_validation = train_test_validation()
         self.suite_data_integrity = data_integrity()
         self.suite_model_evaluation = model_evaluation()
         self.output_dir = Path(self.config.output_dir or 'results')
     
-    def save_results(self, results: SuiteResult, output_path: str,output_format: str = "json")->None:
-        if output_format == "json":
-            with open(output_path, 'w') as f:
-                json.dump(json.loads(results.to_json(with_display=self.config.save_display)), f, indent=3)
-            LOGGER.info(f"Results saved to {output_path}")
-        elif output_format == "html":
-            results.save_as_html(output_path)
-            LOGGER.info(f"Results saved to {output_path}")
-        else:
-            raise ValueError(f"Invalid output format: {output_format}")
+    def _save_artifact(self, artifact: DeepchecksArtifact, dataset_name: str)->None:
+        try:
+            if not self.output_dir.exists():
+                self.output_dir.mkdir(parents=True, exist_ok=True)
+            artifact_path = self.output_dir / f"{dataset_name}.json"
+            with open(artifact_path, 'w') as f:
+                json.dump(artifact.to_dict(), f, indent=3)
+            LOGGER.info(f"Artifact saved to {artifact_path}")
+        except Exception:
+            LOGGER.error(f"Failed to save results to {self.output_dir}. {traceback.format_exc()}")
 
     def run_suites(self, train_data: VisionData, 
+                   dataset_name: str,
                    test_data: Optional[VisionData] = None,
-                   )->Dict[str, SuiteResult]:
+                   )->DeepchecksArtifact:
 
         output = {}
         if self.config.train_test_validation:
-            out_train_test_validation = self.run_suite_train_test_validation(train_data, test_data)
-            output['train_test_validation'] = out_train_test_validation
+            out_train_test_validation = self.run_suite_train_test_validation(train_data, test_data=test_data)
+            output['train_test_validation'] = self.parser.run(out_train_test_validation)
 
         if self.config.data_integrity:
-            out_data_integrity = self.run_suite_data_integrity(train_data, test_data)
-            output['data_integrity'] = out_data_integrity
+            out_data_integrity = self.run_suite_data_integrity(train_data, test_data=test_data)
+            output['data_integrity'] = self.parser.run(out_data_integrity)
 
         if self.config.model_evaluation:
-            out_model_evaluation = self.run_suite_model_evaluation(train_data, test_data)
-            output['model_evaluation'] = out_model_evaluation
+            out_model_evaluation = self.run_suite_model_evaluation(train_data, test_data=test_data)
+            output['model_evaluation'] = self.parser.run(out_model_evaluation)
         
-        if self.config.save_results:
-            if not self.output_dir.exists():
-                self.output_dir.mkdir(parents=True, exist_ok=True)
+        artifact = DeepchecksArtifact(dataset_name=dataset_name, results=output)
 
-            for name, result in output.items():
-                output_path = self.output_dir / f"{name}.{self.config.save_results_format}"
-                self.save_results(result, str(output_path), output_format=self.config.save_results_format)
-                LOGGER.info(f"Results saved to {output_path} in {self.config.save_results_format} format")
-        
-        if self.config.parse_results:
-            try:
-                for name, result in output.items():
-                    output[name] = self.parser.run(result)
-            except Exception:
-                LOGGER.error(f"Error parsing results: {traceback.format_exc()}")
-        
-        return output
+        if self.config.save_results:
+            self._save_artifact(artifact=artifact, dataset_name=dataset_name)
+                
+        return artifact
         
     def run_suite_train_test_validation(self, 
                                 train_data: VisionData, 
