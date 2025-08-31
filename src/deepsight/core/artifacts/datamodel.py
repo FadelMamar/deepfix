@@ -15,21 +15,22 @@ class DeepchecksResultHeaders(Enum):
     ImagePropertyOutliers = "Image Property Outliers"
     PropertyLabelCorrelation = "Property Label Correlation"
     LabelPropertyOutliers = "Label Property Outliers"
+    ClassPerformance = "Class Performance"
 
 class DeepchecksParsedResult(BaseModel):
-    header: DeepchecksResultHeaders = Field(description="Header of the result")
+    header: str = Field(description="Header of the result")
     json_result: Dict[str,Any] = Field(description="JSON result of the result")
     display_images: Optional[List[str]] = Field(default=None,description="Display images of the result as base64 encoded strings")
     display_txt: Optional[str] = Field(default=None,description="Display text of the result")
 
     def to_dict(self)->Dict[str,Any]:
         dumped_dict = self.model_dump()
-        dumped_dict["header"] = dumped_dict["header"].value
+        dumped_dict["header"] = dumped_dict["header"]
         return dumped_dict
     
     @classmethod
     def from_dict(self,d:Dict[str,Any])->"DeepchecksParsedResult":
-        return DeepchecksParsedResult(header=DeepchecksResultHeaders(d["header"]),
+        return DeepchecksParsedResult(header=d["header"],
                             json_result=d["json_result"],
                             display_images=d["display_images"],
                             display_txt=d["display_txt"])

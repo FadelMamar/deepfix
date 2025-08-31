@@ -19,7 +19,7 @@ import base64
 
 from ..utils.config import DeepchecksConfig
 from ..utils.logging import get_logger
-from ..core.artifacts.datamodel import DeepchecksParsedResult,DeepchecksResultHeaders,DeepchecksArtifact
+from ..core.artifacts.datamodel import DeepchecksParsedResult,DeepchecksArtifact,DeepchecksResultHeaders
 
 LOGGER = get_logger(__name__)
 
@@ -48,11 +48,11 @@ class CheckResultsParser:
             parsed_results.append(r)
         return parsed_results
 
-    def parse_txt(self,results:SuiteResult)->Dict[DeepchecksResultHeaders,Dict[str,Any]]:
+    def parse_txt(self,results:SuiteResult)->Dict[str,Dict[str,Any]]:
         parsed_results = {}
         for result in results.results:
-            header = DeepchecksResultHeaders(result.get_metadata().get('header'))
-            if header == DeepchecksResultHeaders.HeatmapComparison:
+            header = result.get_metadata().get('header')
+            if header == DeepchecksResultHeaders.HeatmapComparison.value:
                 json_result = json.loads(result.to_json(with_display=False))
                 json_result['value'].pop('diff')
                 parsed_results[header] = json_result
@@ -60,7 +60,7 @@ class CheckResultsParser:
             parsed_results[header] = json.loads(result.to_json(with_display=False))
         return parsed_results
     
-    def parse_display(self,results:SuiteResult)->Dict[DeepchecksResultHeaders,Dict[str,Union[List[bytes],str]]]:
+    def parse_display(self,results:SuiteResult)->Dict[str,Dict[str,Union[List[bytes],str]]]:
         display_result = {}
         for result in results.results:
             if isinstance(result,CheckFailure):
@@ -68,10 +68,10 @@ class CheckResultsParser:
             if not result.have_display():
                 continue
 
-            header = DeepchecksResultHeaders(result.get_metadata().get('header'))
+            header = result.get_metadata().get('header')
             images,txt = self._parse_display(result)
 
-            if header in [DeepchecksResultHeaders.ImagePropertyOutliers, DeepchecksResultHeaders.NewLabels]:
+            if header in [DeepchecksResultHeaders.ImagePropertyOutliers.value, DeepchecksResultHeaders.NewLabels.value]:
                 txt = None    
 
             display_result[header] = {'images':images, 'txt':txt}

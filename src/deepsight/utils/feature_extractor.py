@@ -44,14 +44,18 @@ class FeatureExtractor(nn.Module):
         
         self._set_model_and_transform()
 
-        self.context = torch.inference_mode if self.freeze else nullcontext
+        self.context = torch.no_grad if self.freeze else nullcontext
 
         if to_torchscript:
             self.to_torchscript()
+        
+        with torch.no_grad():
+            self.num_features = self.forward(torch.randn(1,3,224,224)).shape[1]        
 
     def _set_model_and_transform(self)->str:
+        global_pool = "" if "vit" in self.backbone else "avg"
         self.model = timm.create_model(
-                self.backbone, pretrained=True, num_classes=0,global_pool=""
+                self.backbone, pretrained=True, num_classes=0,global_pool=global_pool
             )
         data_cfg = timm.data.resolve_data_config(self.model.pretrained_cfg)
         transform = timm.data.create_transform(**data_cfg)
@@ -61,13 +65,13 @@ class FeatureExtractor(nn.Module):
             self.model.eval()
             for param in self.model.parameters():
                 param.requires_grad = False
-
+        
     @property
     def feature_dim(self) -> int:
         """
         Return the dimension of the extracted feature vector.
         """
-        return self.model.num_features
+        return self.num_features
 
     def forward(self, images: Union[torch.Tensor, List[Image.Image]]) -> torch.Tensor:
         """
@@ -91,10 +95,9 @@ class FeatureExtractor(nn.Module):
     def _forward(self,images:torch.Tensor) -> torch.Tensor:
         with self.context():
             if "vit" in self.backbone: # get CLS token for ViT models
-                x = self.model(images)[:,0,:]
+                return self.model(images)[:,0,:]
             else:
-                x = self.model(images)
-        return x.cpu()
+                return self.model(images)
     
     def to_torchscript(self)->None:
         self.model = torch.jit.script(self.model)

@@ -56,8 +56,7 @@ class TimmClassificationModel(torch.nn.Module):
         """
         super().__init__()
         self.backbone = FeatureExtractor(model_name,
-                    num_classes=num_classes,
-                    freeze_backbone=freeze_backbone,
+                    freeze=freeze_backbone,
                     to_torchscript=False
                 )
         self.mlp = ClassifierHead(self.backbone.feature_dim, num_classes=num_classes,hidden_dim=hidden_dim,num_layers=num_layers,dropout=dropout)

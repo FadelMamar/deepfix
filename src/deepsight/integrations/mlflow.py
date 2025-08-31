@@ -18,10 +18,7 @@ from pathlib import Path
 
 class MLflowManager:
     """
-    MLflow integration client for model and experiment management.
-    
-    Provides high-level interface for accessing MLflow models, experiments,
-    and metrics for overfitting analysis.
+    MLflow integration client for model, experiment and artifact management.
     """
     
     def __init__(self, tracking_uri: Optional[str] = None, 

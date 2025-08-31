@@ -17,122 +17,30 @@ The MLOps Copilot aims to:
 deepsight/
 ├── __init__.py
 ├── core/                    # Core analysis engine
-│   ├── analyzer.py          # Model analysis algorithms
-│   ├── detector.py          # Overfitting detection methods
-│   └── reporter.py          # Report generation and formatting
 ├── integrations/            # External tool integrations
-│   ├── mlflow_client.py     # MLflow model access and metrics
-│   ├── deepchecks_runner.py # Automated model validation
-│   ├── dvc_manager.py       # Data versioning and access
-│   └── research_assistant.py # Academic research and solutions
+│   ├── mlflow.py     # MLflow model access and metrics
+│   ├── deepchecks.py # Automated model validation
 ├── cli/                     # Command-line interface
 │   ├── main.py              # CLI entry point
 │   └── commands.py          # Command implementations
 ├── utils/                   # Shared utilities
 │   ├── config.py            # Configuration management
 │   ├── logging.py           # Structured logging
-│   └── validators.py        # Input validation and sanitization
-└── templates/               # Output templates
-    ├── reports/             # HTML/PDF report templates
-    └── configs/             # Default configuration files
+
 ```
 
-## 🛠️ Tech Stack
-
-### Core Technologies
-- **Python 3.8+**: Primary language for cross-platform compatibility
-- **MLflow**: Model registry and experiment tracking integration
-- **DVC**: Data version control and pipeline management
-- **Deepchecks**: Automated model validation and testing framework
-
-### ML/CV Libraries
-- **PyTorch**: Model loading and inference support
-- **OpenCV**: Computer vision utilities and preprocessing
-- **NumPy/Pandas**: Data manipulation and analysis
-
-### Web and Research
-- **arxiv-py**: Academic paper search and retrieval
-- **semantic-scholar**: Research paper analysis
-
-### Reporting and Visualization
-- **Plotly/Matplotlib**: Interactive visualizations
-- **Weasyprint**: PDF report generation
-- **Rich**: CLI formatting and progress bars
-
-### Development and Packaging
-- **uv**: Dependency management and packaging
-- **pytest**: Testing framework
-- **ruff**: Code formatting
-- **pre-commit**: Development workflow automation
-
-## 🔧 Critical Features
-
-### 1. Overfitting Detection Engine
-**Priority: High**
-- **Statistical Analysis**: Train/validation loss divergence detection
-- **Metric Tracking**: Performance gap analysis across datasets
-- **Learning Curve Analysis**: Automated pattern recognition
-- **Cross-validation Assessment**: K-fold stability evaluation
-- **Feature Importance**: Input sensitivity analysis for CV models
-
-### 2. MLflow Integration
-**Priority: High**
-- **Model Registry Access**: Automatic model discovery and loading
-- **Experiment Comparison**: Multi-run overfitting analysis
-- **Artifact Management**: Model weights and metadata retrieval
-- **Metric Aggregation**: Historical performance tracking
-- **Version Compatibility**: Support for MLflow 1.x and 2.x
-
-### 3. Deepchecks Automation
-**Priority: High**
-- **Suite Configuration**: Pre-configured CV model test suites
-- **Custom Checks**: Overfitting-specific validation checks
-- **Batch Processing**: Multiple model validation workflows
-- **Result Parsing**: Structured output for analysis pipeline
-- **Integration Hooks**: Seamless pipeline integration
-
-### 4. DVC Data Management
-**Priority: Medium**
-- **Dataset Access**: Automated data pipeline discovery
-- **Version Tracking**: Data drift detection across versions
-- **Pipeline Integration**: Model-data lineage analysis
-- **Storage Abstraction**: Multi-cloud storage support
-- **Metadata Extraction**: Dataset characteristics analysis
-
-### 5. Research Assistant
-**Priority: Medium**
-- **Problem Classification**: Automated issue categorization
-- **Literature Search**: Relevant paper discovery based on model characteristics
-- **Solution Mapping**: Best practices extraction from research
-- **Citation Management**: Proper academic referencing
-- **Summary Generation**: Key insights and recommendations
-
-### 6. Report Generation
-**Priority: Medium**
-- **Interactive Dashboards**: HTML-based analysis reports
-- **PDF Exports**: Comprehensive technical documentation
-- **Custom Templates**: Configurable report layouts
-- **Visualization Suite**: Charts, graphs, and model insights
-- **Executive Summaries**: High-level findings and recommendations
-
-### 7. Multi-Interface Support
-**Priority: Low**
-- **Python API**: Programmatic access for notebooks and scripts
-- **CLI Tool**: Command-line interface for CI/CD integration
-- **Configuration Management**: YAML/JSON-based settings
-- **Plugin Architecture**: Extensible functionality framework
 
 ## 📋 Implementation Plan
 
-### Phase 1: Foundation (Day 1)
-- [ ] Project structure and packaging setup
-- [ ] Core configuration and logging systems
+### Phase 1: Foundation (Day 1-2)
+- [X] Project structure and packaging setup
+- [X] Core configuration and logging systems
 - [ ] Complete MLflow integration with experiment tracking
-- [ ] Deepchecks integration
+- [X] Deepchecks integration
 - [ ] Basic report generation system
-- [ ] Input validation and error handling
+- [X] Input validation and error handling
 - [ ] DVC integration for data access and versioning
-- [ ] Dataset analysis and drift detection
+- [X] Dataset analysis and drift detection
 - [ ] CLI framework and basic commands
 
 ### Phase 2: Research Assistant (Day 2)

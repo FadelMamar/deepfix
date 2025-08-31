@@ -1,6 +1,6 @@
 import traceback
 import os
-from typing import Any, Tuple, Dict, Literal
+from typing import Any, Tuple, Dict, Literal, Optional
 import mlflow
 from omegaconf import OmegaConf
 from lightning import Trainer
@@ -103,7 +103,7 @@ class ClassifierModule(L.LightningModule):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
     
-    def predict_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
+    def predict_step(self, batch: torch.Tensor, batch_idx: Optional[int] = None) -> torch.Tensor:
         logits = self(batch)
         return logits.softmax(dim=1)
 
