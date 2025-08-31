@@ -14,6 +14,8 @@ import timm
 import torch.nn as nn
 import torchvision.transforms as T
 
+from contextlib import nullcontext
+
 
 class FeatureExtractor(nn.Module):
     """
@@ -22,8 +24,9 @@ class FeatureExtractor(nn.Module):
 
     def __init__(
         self,
-        backbone: str = "timm/vit_base_patch14_reg4_dinov2.lvd142m",
-        device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        model_name: str = "timm/vit_base_patch14_reg4_dinov2.lvd142m",
+        freeze: bool = True,
+        to_torchscript: bool = False,
     ):
         """
         Initialize the feature extractor.
@@ -33,14 +36,18 @@ class FeatureExtractor(nn.Module):
         """
         super().__init__()
         
-        self.backbone = backbone
+        self.backbone = model_name
         self.model = None
         self.transform = None
-        self.device = device
         self.pil_to_tensor = T.PILToTensor()
+        self.freeze = freeze
         
         self._set_model_and_transform()
-        self.to_torchscript()
+
+        self.context = torch.inference_mode if self.freeze else nullcontext
+
+        if to_torchscript:
+            self.to_torchscript()
 
     def _set_model_and_transform(self)->str:
         self.model = timm.create_model(
@@ -50,11 +57,10 @@ class FeatureExtractor(nn.Module):
         transform = timm.data.create_transform(**data_cfg)
         self.transform = nn.Sequential(*[t for t in transform.transforms if isinstance(t, (T.Normalize,T.Resize))])
 
-        for param in self.model.parameters():
-            param.requires_grad = False
-
-        self.model.eval()
-        self.model.to(self.device)
+        if self.freeze:
+            self.model.eval()
+            for param in self.model.parameters():
+                param.requires_grad = False
 
     @property
     def feature_dim(self) -> int:
@@ -67,7 +73,7 @@ class FeatureExtractor(nn.Module):
         """
         Extract features
         """
-        images = self._load(images).to(self.device)
+        images = self._load(images)
         return self._forward(images)
     
     def _load(self,images: Union[torch.Tensor, List[Image.Image]]):
@@ -83,7 +89,7 @@ class FeatureExtractor(nn.Module):
         return images
 
     def _forward(self,images:torch.Tensor) -> torch.Tensor:
-        with torch.inference_mode():
+        with self.context():
             if "vit" in self.backbone: # get CLS token for ViT models
                 x = self.model(images)[:,0,:]
             else:

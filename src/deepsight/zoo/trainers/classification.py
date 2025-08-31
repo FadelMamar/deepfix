@@ -1,8 +1,7 @@
 import traceback
-import os
 from typing import Any, Tuple, Dict, Literal
 import mlflow
-from OmegaConf import OmegaConf
+from omegaconf import OmegaConf
 from lightning import Trainer
 from lightning.pytorch.callbacks import (
     ModelCheckpoint,
@@ -18,7 +17,7 @@ from torchmetrics.classification import Accuracy, Precision, Recall, F1Score, AU
 from pydantic import BaseModel, Field
 from torch.utils.data import Dataset, DataLoader
 
-from ..utils.logging import get_logger
+from ...utils.logging import get_logger
 
 LOGGER = get_logger(__name__)
 
