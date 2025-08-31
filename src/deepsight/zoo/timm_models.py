@@ -19,21 +19,26 @@ class ClassifierHead(nn.Module):
     def __init__(self, input_dim: int, num_classes: int, dropout: float = 0.2,hidden_dim:int=128,num_layers:int=2):
         super().__init__()
         layers = []
-        for i in range(num_layers-1):
-            if i == 0:
-                layers.append(nn.Sequential(
-                    nn.Linear(input_dim, hidden_dim),
-                    nn.ReLU(),
-                    nn.Dropout(p=dropout)
-                ))
-            else:
-                layers.append(nn.Sequential(
-                    nn.Linear(hidden_dim, hidden_dim),
-                    nn.ReLU(),
-                    nn.Dropout(p=dropout)
-                ))
-        layers.append(nn.Linear(hidden_dim, num_classes))
-        self.fc = nn.Sequential(*layers)
+        if num_layers > 1:
+            for i in range(num_layers-1):
+                if i == 0:
+                    layers.append(nn.Sequential(
+                        nn.Linear(input_dim, hidden_dim),
+                        nn.ReLU(),
+                        nn.Dropout(p=dropout)
+                    ))
+                else:
+                    layers.append(nn.Sequential(
+                        nn.Linear(hidden_dim, hidden_dim),
+                        nn.ReLU(),
+                        nn.Dropout(p=dropout)
+                    ))
+            layers.append(nn.Linear(hidden_dim, num_classes))
+            self.fc = nn.Sequential(*layers)
+        elif num_layers == 1:
+            self.fc = nn.Linear(input_dim, num_classes)
+        else:
+            raise ValueError(f"Invalid number of layers: {num_layers}. Must be greater than 0.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.fc(x)

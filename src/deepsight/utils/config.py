@@ -6,11 +6,7 @@ in various formats (YAML, JSON) with schema validation and defaults.
 """
 
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional, List, Literal
-import yaml
-import json
-import os
-from copy import deepcopy
+from typing import Optional
 
 
 class DeepchecksConfig(BaseModel):
@@ -20,10 +16,10 @@ class DeepchecksConfig(BaseModel):
     max_samples: Optional[int] = Field(default=None,description="Maximum number of samples to run the suites on")
     random_state: int = Field(default=42,description="Random seed to use for the suites")
     save_results: bool = Field(default=False,description="Whether to save the results")
-    save_results_format: Literal["json", "html"] = Field(default="json",description="Format to save the results")
     output_dir: Optional[str] = Field(default=None,description="Output directory to save the results")
     save_display: bool = Field(default=False,description="Whether to save the display")
     parse_results: bool = Field(default=False,description="Whether to parse the results")
+    batch_size: int = Field(default=16,description="Batch size to use for the suites")
 
 class DVCConfig(BaseModel):
     remote: str = Field(default="origin")

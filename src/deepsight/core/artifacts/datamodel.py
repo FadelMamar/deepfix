@@ -18,7 +18,7 @@ class DeepchecksResultHeaders(Enum):
 
 class DeepchecksParsedResult(BaseModel):
     header: DeepchecksResultHeaders = Field(description="Header of the result")
-    json: Dict[str,Any] = Field(description="JSON result of the result")
+    json_result: Dict[str,Any] = Field(description="JSON result of the result")
     display_images: Optional[List[str]] = Field(default=None,description="Display images of the result as base64 encoded strings")
     display_txt: Optional[str] = Field(default=None,description="Display text of the result")
 

@@ -222,6 +222,8 @@ cython_debug/
 mlruns/
 mlflow.db
 
+/data/
+/checkpoints/
 
 # Marimo
 marimo/_static/

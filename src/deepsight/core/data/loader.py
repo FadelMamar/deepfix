@@ -5,18 +5,20 @@ from typing import Dict, Optional, Callable
 from functools import partial
 
 def classification_collate(data) -> BatchOutputFormat:
-    # Extracting images and label and converting images of (N, C, H, W) into (N, H, W, C)
-    images = torch.stack([x[0] for x in data]).permute(0, 2, 3, 1).cpu().numpy()
+    images = torch.stack([x[0] for x in data])
+    images = images.permute(0, 2, 3, 1).cpu().numpy() # (N, C, H, W) into (N, H, W, C)
     labels = [x[1] for x in data]
-    return BatchOutputFormat(images= images, labels= labels)
+    return BatchOutputFormat(images=images, labels=labels)
 
 def classification_collate_with_model(data,model: Callable[[torch.Tensor],torch.Tensor]) -> BatchOutputFormat:
-    # Extracting images and label and converting images of (N, C, H, W) into (N, H, W, C)
     images = torch.stack([x[0] for x in data])
-    predictions = model(images)
-    images = images.permute(0, 2, 3, 1).cpu().numpy()
+    with torch.inference_mode():
+        predictions = model(images)
+        if isinstance(predictions,torch.Tensor):
+            predictions = predictions.cpu().numpy()
+    images = images.permute(0, 2, 3, 1).cpu().numpy() # (N, C, H, W) into (N, H, W, C)
     labels = [x[1] for x in data]
-    return BatchOutputFormat(images=images, labels=labels,predictions=predictions.cpu().numpy())
+    return BatchOutputFormat(images=images, labels=labels,predictions=predictions)
 
 
 class ClassificationVisionDataLoader:
@@ -34,7 +36,6 @@ class ClassificationVisionDataLoader:
     def load_from_dataloader(cls, dataloader: DataLoader,label_map: Optional[Dict[int, str]] = None) -> VisionData:
         assert isinstance(dataloader,DataLoader), "dataloader must be an instance of torch.utils.data.DataLoader. Received: {}".format(type(dataloader))
         vision_data = VisionData(dataloader, task_type='classification',label_map=label_map)
-        # Visualize the data and verify it is in the correct format
         vision_data.head()
         return vision_data
 

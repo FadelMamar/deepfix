@@ -1,4 +1,5 @@
 import traceback
+import os
 from typing import Any, Tuple, Dict, Literal
 import mlflow
 from omegaconf import OmegaConf
@@ -18,6 +19,7 @@ from pydantic import BaseModel, Field
 from torch.utils.data import Dataset, DataLoader
 
 from ...utils.logging import get_logger
+from ...integrations.lightning import DeepSightCallback
 
 LOGGER = get_logger(__name__)
 
@@ -77,9 +79,7 @@ class ClassifierModule(L.LightningModule):
 
         self.model = model
         self.num_classes = self.hparams.num_classes
-      
-        self.mlflow_run_id = None
-        self.mlflow_experiment_id = None
+        self.config = config
 
         # metrics
         cfg = {
@@ -102,6 +102,10 @@ class ClassifierModule(L.LightningModule):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
+    
+    def predict_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
+        logits = self(batch)
+        return logits.softmax(dim=1)
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         x, y = batch
@@ -127,8 +131,8 @@ class ClassifierModule(L.LightningModule):
     def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
         x, y = batch
         y = y.long().flatten()
-
         logits = self(x)
+        
         loss = F.cross_entropy(logits, y, label_smoothing=self.hparams.label_smoothing )
 
         for _, metric in self.metrics.items():
@@ -137,22 +141,12 @@ class ClassifierModule(L.LightningModule):
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
 
     def on_validation_epoch_end(self) -> None:
-        if self.mlflow_run_id is None:
-            self.mlflow_run_id = getattr(self.logger, "run_id", None)
-            self.mlflow_experiment_id = getattr(self.logger, "experiment_id", None)
-            if self.mlflow_run_id is not None:
-                LOGGER.info(f"MLflow run_id: {self.mlflow_run_id}")
-                LOGGER.info(f"MLflow experiment_id: {self.mlflow_experiment_id}")
-            else:
-                LOGGER.warning("No mlflow logger found")
-                self.mlflow_run_id = "None"
-
         for name, metric in self.metrics.items():
             score = metric.compute().cpu()
             self.log(f"val_{name}", score.mean())
-            for i, score in enumerate(score):
-                cls_name = self.label_to_class_map.get(i, i)
-                self.log(f"val_{name}_class_{cls_name}", score)
+            #for i, score in enumerate(score):
+            #    cls_name = self.config.label_to_class_map.get(i, i)
+            #    self.log(f"val_{name}_class_{cls_name}", score)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
@@ -225,7 +219,7 @@ class ClassificationTrainer(object):
             monitor=self.config.monitor,
             save_last=True,
             mode=self.config.mode,
-            dirpath=self.config.dirpath / self.config.run_name,
+            dirpath=os.path.join(self.config.dirpath, self.config.run_name),
             filename=self.config.filename,
             save_weights_only=self.config.save_weights_only,
             save_on_train_epoch_end=False
@@ -249,22 +243,11 @@ class ClassificationTrainer(object):
         
         return callbacks, mlflow_logger
 
-    def log_model(self, model: ClassifierModule) -> None:
-        if model.mlflow_run_id and self.best_model_path:
-            with mlflow.start_run(run_id=model.mlflow_run_id):
-                try:
-                    mlflow.log_param("best_model_score", self.best_model_score)
-                    mlflow.log_artifact(str(self.best_model_path), "best_checkpoint")
-                    cfg_path = Path(self.best_model_path).with_name("trainer_config.yaml")
-                    OmegaConf.save(self.config.model_dump(), cfg_path)
-                    mlflow.log_artifact(str(cfg_path), "trainer_config")
-                except Exception:
-                    LOGGER.error(f"Error logging best model: {traceback.format_exc()}")
-
     def run(self, model:torch.nn.Module,
             train_dataset: Dataset,
             val_dataset: Dataset,
-                   debug: bool = False) -> None:
+            deepsight_callback: DeepSightCallback,
+            debug: bool = False) -> None:
         """
         Run image classification training or evaluation based on config.
         """
@@ -290,6 +273,8 @@ class ClassificationTrainer(object):
 
         # Callbacks
         callbacks, mlflow_logger = self.get_callbacks()
+        if isinstance(deepsight_callback, DeepSightCallback):
+            callbacks.append(deepsight_callback)
         trainer = Trainer(
             max_epochs=self.config.epochs if not debug else 1,
             accelerator=self.config.accelerator,
@@ -302,10 +287,9 @@ class ClassificationTrainer(object):
             default_root_dir=self.config.dirpath
             )
 
-        trainer.fit(model, datamodule=datamodule)
+        trainer.fit(classifier, datamodule=datamodule)
 
         self.best_model_path = trainer.checkpoint_callback.best_model_path
         self.best_model_score = trainer.checkpoint_callback.best_model_score
     
-        if self.config.log_best_model:
-            self.log_model(classifier)
+        
