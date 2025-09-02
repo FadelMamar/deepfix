@@ -1,82 +1,41 @@
-"""
-Configuration management for Cursor API integration using Pydantic.
-"""
+"""Configuration management for Cursor CLI integration."""
 
-from typing import Optional
-from pydantic import BaseModel, Field, field_validator
-import os
-
+from typing import Optional, Dict, Any
+from pydantic import BaseModel, Field
 
 class CursorConfig(BaseModel):
-    """Configuration for Cursor API client."""
+    """Configuration for Cursor CLI integration."""
     
-    # API Configuration
-    api_token: str = Field(..., description="Cursor API authentication token")
-    base_url: str = Field(
-        default="https://api.cursor.com/v0",
-        description="Base URL for Cursor API"
-    )
-            
-    # Request Configuration
-    timeout: int = Field(
-        default=30,
-        description="Request timeout in seconds"
-    )
-    max_retries: int = Field(
-        default=3,
-        description="Maximum number of retries for failed requests"
-    )
-    retry_delay: float = Field(
-        default=1.0,
-        description="Initial delay between retries in seconds"
-    )
-    
-    # Logging Configuration
-    log_level: str = Field(
-        default="INFO",
-        description="Logging level"
-    )
-    log_requests: bool = Field(
-        default=True,
-        description="Whether to log API requests/responses"
-    )
-    
-    class Config:
-        env_prefix = "CURSOR_"
+    model: str = Field(default="auto",description="Model to use for Cursor CLI integration")
+    output_format: str = Field(default="text",description="Output format to use for Cursor CLI integration",
+                          examples=["text", "json", "stream-json"])
+    timeout: int = Field(default=300,description="Timeout to use for Cursor CLI integration")
+    cli_path: str = Field(default="cursor-agent",description="Path to the Cursor CLI executable")
+    working_directory: Optional[str] = Field(default=None,description="Working directory to use for Cursor CLI integration")
+    additional_args: Optional[Dict[str, Any]] = Field(default=None,description="Additional arguments to use for Cursor CLI integration")
         
-    @field_validator("api_token")
-    def validate_api_token(cls, v):
-        if not v or not v.strip():
-            raise ValueError("API token cannot be empty")
-        return v.strip()
-    
-    @field_validator("base_url")
-    def validate_base_url(cls, v):
-        if not v.startswith(("http://", "https://")):
-            raise ValueError("Base URL must start with http:// or https://")
-        return v.rstrip("/")
-    
-    @field_validator("timeout")
-    def validate_timeout(cls, v):
-        if v <= 0:
-            raise ValueError("Timeout must be positive")
-        return v
-    
-    @field_validator("max_retries")
-    def validate_max_retries(cls, v):
-        if v < 0:
-            raise ValueError("Max retries cannot be negative")
-        return v
-    
-    @classmethod
-    def from_env(cls) -> "CursorConfig":
-        """Create configuration from environment variables."""
-        return cls(
-            api_token=os.getenv("CURSOR_API_TOKEN", ""),
-            base_url=os.getenv("CURSOR_BASE_URL", "https://api.cursor.com/v0"),
-            timeout=int(os.getenv("CURSOR_TIMEOUT", "30")),
-            max_retries=int(os.getenv("CURSOR_MAX_RETRIES", "3")),
-            retry_delay=float(os.getenv("CURSOR_RETRY_DELAY", "1.0")),
-            log_level=os.getenv("CURSOR_LOG_LEVEL", "INFO"),
-            log_requests=os.getenv("CURSOR_LOG_REQUESTS", "true").lower() == "true",
-        )
+    def to_cli_args(self) -> list[str]:
+        """Convert configuration to CLI arguments."""
+        args = [
+            self.cli_path,
+            "-p",  # prompt flag
+        ]
+        
+        # Add model if specified
+        if self.model:
+            args.extend(["--model", self.model])
+        
+        # Add output format if specified
+        if self.output_format:
+            args.extend(["--output-format", self.output_format])
+        
+        # Add additional arguments
+        if self.additional_args:
+            for key, value in self.additional_args.items():
+                if isinstance(value, bool):
+                    if value:
+                        args.append(f"--{key}")
+                else:
+                    args.extend([f"--{key}", str(value)])
+        
+        return args

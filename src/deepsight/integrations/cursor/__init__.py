@@ -1,42 +1,9 @@
 """
-Cursor API Integration for DeepSight
+Cursor CLI Integration
 
-This module provides a comprehensive wrapper around the Cursor Background Agent API
-to handle LLM queries and reasoning for the DeepSight project.
+A Python wrapper around Cursor's CLI for non-interactive mode.
 """
 
-from .cursor import CursorAgent, LLMQueryHandler
-from .config import CursorConfig
-from .exceptions import (
-    CursorAPIError, CursorAuthError, CursorValidationError,
-    CursorRateLimitError, CursorAgentNotFoundError
-)
-from .models import (
-    AgentStatus, ImageData, Prompt, SourceConfig, TargetConfig,
-    AgentRequest, AgentResponse, AgentStatusResponse, LLMQuery, LLMResponse
-)
-from .utils import encode_image_to_base64, validate_image_data, create_prompt_template
+from .cursor import Cursor
 
-__all__ = [
-    "CursorAgent",
-    "CursorConfig", 
-    "LLMQueryHandler",
-    "CursorAPIError",
-    "CursorAuthError", 
-    "CursorValidationError",
-    "CursorRateLimitError",
-    "CursorAgentNotFoundError",
-    "AgentStatus",
-    "ImageData",
-    "Prompt",
-    "SourceConfig",
-    "TargetConfig",
-    "AgentRequest",
-    "AgentResponse", 
-    "AgentStatusResponse",
-    "LLMQuery",
-    "LLMResponse",
-    "encode_image_to_base64",
-    "validate_image_data",
-    "create_prompt_template",
-]
+__all__ = ["Cursor"]

@@ -100,13 +100,13 @@ class ArtifactsManager:
     def load_artifact(self, run_id: str, 
                     artifact_key: str,
                     download_if_missing: bool = True) -> Union[DeepchecksArtifact, TrainingArtifacts, str]:
-
+        artifact_key = ArtifactPaths(artifact_key)
         path = self.get_local_path(run_id, artifact_key, download_if_missing)
-        if artifact_key == ArtifactPaths.DEEPCHECKS.value:
+        if artifact_key == ArtifactPaths.DEEPCHECKS:
             return self.load_deepchecks_artifacts(path)
-        elif artifact_key == ArtifactPaths.TRAINING.value:
+        elif artifact_key == ArtifactPaths.TRAINING:
             return self.load_training_artifacts(path)
-        elif artifact_key == ArtifactPaths.MODEL_CHECKPOINT.value:
+        elif artifact_key == ArtifactPaths.MODEL_CHECKPOINT:
             return self.load_model_checkpoint(path)
         else:
             raise ValueError(f"Artifact key {artifact_key} not supported")
