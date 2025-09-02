@@ -6,7 +6,10 @@ in various formats (YAML, JSON) with schema validation and defaults.
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Dict, Any
+from pathlib import Path
+
+ROOT = Path(__file__).parents[2]
 
 
 class DeepchecksConfig(BaseModel):
@@ -20,6 +23,10 @@ class DeepchecksConfig(BaseModel):
     save_display: bool = Field(default=False,description="Whether to save the display")
     parse_results: bool = Field(default=False,description="Whether to parse the results")
     batch_size: int = Field(default=16,description="Batch size to use for the suites")
+
+    @classmethod
+    def from_dict(cls, config: Dict[str, Any]) -> "DeepchecksConfig":
+        return cls(**config)
 
 class DVCConfig(BaseModel):
     remote: str = Field(default="origin")

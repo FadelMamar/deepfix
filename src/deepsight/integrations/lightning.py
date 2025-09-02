@@ -8,6 +8,8 @@ from torch.utils.data import Dataset
 from deepchecks.vision import VisionData
 from typing import Optional, Tuple, Callable
 import torch
+import tempfile
+import os
 
 from ..utils.logging import get_logger
 from .deepchecks import DeepchecksRunner
@@ -75,12 +77,15 @@ class DeepSightCallback(Callback):
         if self.mlflow_run_id:
             with mlflow.start_run(run_id=self.mlflow_run_id,log_system_metrics=True):
                 try:
-                    # save config
-                    OmegaConf.save(self.deepchecks_config.model_dump(), "deepchecks_config.yaml")
-                    mlflow.log_artifact("deepchecks_config.yaml", "deepchecks/config")
-                    # save artifacts
-                    OmegaConf.save(artifacts.to_dict(), "deepchecks_artifacts.yaml")
-                    mlflow.log_artifact("deepchecks_artifacts.yaml", "deepchecks/artifacts")
+                    with tempfile.TemporaryDirectory() as tmp_dir:
+                        # save config
+                        config_path = os.path.join(tmp_dir, "config.yaml")
+                        OmegaConf.save(self.deepchecks_config.model_dump(), config_path)
+                        mlflow.log_artifact(config_path, "deepchecks")
+                        # save artifacts
+                        artifacts_path = os.path.join(tmp_dir, "artifacts.yaml")
+                        OmegaConf.save(artifacts.to_dict(), artifacts_path)
+                        mlflow.log_artifact(artifacts_path, "deepchecks")
                 except Exception:
                     LOGGER.error(f"Error logging best model: {traceback.format_exc()}")
         return None
@@ -101,9 +106,6 @@ class DeepSightCallback(Callback):
                 try:
                     mlflow.log_metric("best_model_score", self.best_model_score)
                     mlflow.log_artifact(str(self.best_model_path), "best_checkpoint")
-                    cfg_path = Path(self.best_model_path).with_name("trainer_config.yaml")
-                    OmegaConf.save(self.config, cfg_path)
-                    mlflow.log_artifact(str(cfg_path), "trainer_config")
                 except Exception:
                     LOGGER.error(f"Error logging best model: {traceback.format_exc()}")
         else:
