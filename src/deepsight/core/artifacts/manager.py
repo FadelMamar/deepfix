@@ -98,10 +98,10 @@ class ArtifactsManager:
         return None
     
     def load_artifact(self, run_id: str, 
-                    artifact_key: str,
+                    artifact_key: Union[str, ArtifactPaths],
                     download_if_missing: bool = True) -> Union[DeepchecksArtifact, TrainingArtifacts, str]:
-        artifact_key = ArtifactPaths(artifact_key)
-        path = self.get_local_path(run_id, artifact_key, download_if_missing)
+        artifact_key = ArtifactPaths(artifact_key) if isinstance(artifact_key, str) else artifact_key
+        path = self.get_local_path(run_id, artifact_key.value, download_if_missing)
         if artifact_key == ArtifactPaths.DEEPCHECKS:
             return self.load_deepchecks_artifacts(path)
         elif artifact_key == ArtifactPaths.TRAINING:

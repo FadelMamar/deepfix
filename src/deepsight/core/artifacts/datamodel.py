@@ -3,15 +3,18 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any, Union
 from enum import Enum
+import os
 from sqlmodel import SQLModel, Field as SQLField
 from sqlalchemy import (Column, DateTime, Integer, 
                         String, Enum as SAEnum, 
                         JSON, Index, 
                         UniqueConstraint)
 from datetime import datetime
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from ...utils.config import DeepchecksConfig
 import pandas as pd
+import yaml
+
 
 class ArtifactPaths(Enum):
     # training artifacts
@@ -44,17 +47,21 @@ class DeepchecksParsedResult(BaseModel):
     display_images: Optional[List[str]] = Field(default=None,description="Display images of the result as base64 encoded strings")
     display_txt: Optional[str] = Field(default=None,description="Display text of the result")
 
-    def to_dict(self)->Dict[str,Any]:
+    def to_dict(self,exclude_images:bool=False)->Dict[str,Any]:
         dumped_dict = self.model_dump()
         dumped_dict["header"] = dumped_dict["header"]
+        dumped_dict.pop("display_txt")
+        if exclude_images:
+            dumped_dict.pop("display_images")            
         return dumped_dict
     
     @classmethod
     def from_dict(self,d:Union[Dict[str,Any],DictConfig])->"DeepchecksParsedResult":
         return DeepchecksParsedResult(header=d["header"],
                             json_result=d["json_result"],
-                            display_images=d["display_images"],
-                            display_txt=d["display_txt"])
+                            display_images=d.get("display_images",None),
+                            display_txt=d.get("display_txt",None))
+
 
 class DeepchecksArtifact(BaseModel):
     dataset_name: str = Field(description="Name of the dataset")
@@ -78,8 +85,18 @@ class DeepchecksArtifact(BaseModel):
                                 config=config)
     
     @classmethod
-    def from_file(cls, file_path: str)->"DeepchecksArtifact":
-        return cls.from_dict(OmegaConf.load(file_path))
+    def from_file(cls, file_path: Optional[str] = None, dir_path: Optional[str] = None)->"DeepchecksArtifact":
+        assert (file_path is None) ^ (dir_path is None), "Either file_path or dir_path must be provided"
+
+        file_path = file_path if (file_path is not None) else os.path.join(dir_path, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
+        with open(file_path, 'r') as f:
+            d = yaml.safe_load(f)
+
+        artifacts = cls.from_dict(d)
+        if dir_path is not None:
+            artifacts.config = DeepchecksConfig.from_file(os.path.join(dir_path, ArtifactPaths.DEEPCHECKS_CONFIG.value))
+            
+        return artifacts
 
 # Training Artifacts
 class TrainingArtifacts(BaseModel):
@@ -94,6 +111,10 @@ class TrainingArtifacts(BaseModel):
         if self.metrics_values is not None:
             dumped_dict["metrics_values"] = self.metrics_values.to_dict(orient="list")
         return dumped_dict
+    
+    @classmethod
+    def from_file(cls, metrics_path: str)->"TrainingArtifacts":
+        return cls(metrics_path=metrics_path,metrics_values=pd.read_csv(metrics_path))
 
 ## Dataset
 class ClassificationDataElement(BaseModel):

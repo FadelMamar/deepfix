@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, Union
 from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
+import yaml
 
 ROOT = Path(__file__).parents[2]
 
@@ -31,7 +32,9 @@ class DeepchecksConfig(BaseModel):
         
     @classmethod
     def from_file(cls, file_path: str) -> "DeepchecksConfig":
-        return cls.from_dict(OmegaConf.load(file_path))
+        with open(file_path, 'r') as f:
+            config = yaml.safe_load(f)
+        return cls.from_dict(config)
 
 class DVCConfig(BaseModel):
     remote: str = Field(default="origin")
