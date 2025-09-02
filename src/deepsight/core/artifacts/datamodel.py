@@ -9,7 +9,9 @@ from sqlalchemy import (Column, DateTime, Integer,
                         JSON, Index, 
                         UniqueConstraint)
 from datetime import datetime
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
+from ...utils.config import DeepchecksConfig
+import pandas as pd
 
 class ArtifactPaths(Enum):
     # training artifacts
@@ -57,16 +59,41 @@ class DeepchecksParsedResult(BaseModel):
 class DeepchecksArtifact(BaseModel):
     dataset_name: str = Field(description="Name of the dataset")
     results: Dict[str,List[DeepchecksParsedResult]] = Field(description="Results of the artifact")
+    config: Optional[DeepchecksConfig] = Field(default=None,description="Config of the artifact")
 
     def to_dict(self)->Dict[str,Any]:
         dumped_dict = self.model_dump()
         dumped_dict["results"] = {k:[r.to_dict() for r in v] for k,v in self.results.items()}
+        dumped_dict["config"] = self.config.model_dump() if self.config else None
         return dumped_dict
     
     @classmethod
     def from_dict(self,d:Union[Dict[str,Any],DictConfig])->"DeepchecksArtifact":
+        results = {k:[DeepchecksParsedResult.from_dict(r) for r in v] for k,v in d["results"].items()}
+        config = None
+        if d.get("config"):
+            config = DeepchecksConfig.from_dict(d["config"])
         return DeepchecksArtifact(dataset_name=d["dataset_name"],
-                            results={k:[DeepchecksParsedResult.from_dict(r) for r in v] for k,v in d["results"].items()})
+                                results=results,
+                                config=config)
+    
+    @classmethod
+    def from_file(cls, file_path: str)->"DeepchecksArtifact":
+        return cls.from_dict(OmegaConf.load(file_path))
+
+# Training Artifacts
+class TrainingArtifacts(BaseModel):
+    model_config = {"arbitrary_types_allowed": True}
+    
+    metrics_path: Optional[str] = Field(default=None,description="Path to the metrics file")
+    metrics_values: Optional[pd.DataFrame] = Field(default=None,description="Metrics of the artifact")
+    params: Optional[Dict[str,Any]] = Field(default=None,description="Parameters of the training routine")
+
+    def to_dict(self)->Dict[str,Any]:
+        dumped_dict = self.model_dump()
+        if self.metrics_values is not None:
+            dumped_dict["metrics_values"] = self.metrics_values.to_dict(orient="list")
+        return dumped_dict
 
 ## Dataset
 class ClassificationDataElement(BaseModel):

@@ -8,17 +8,16 @@ This module provides comprehensive MLflow integration including:
 - Metric aggregation and analysis
 """
 
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 import mlflow
 from mlflow.tracking import MlflowClient
-from mlflow.entities import Run, Experiment, FileInfo
+from mlflow.entities import Run, Experiment
 import pandas as pd
 from pathlib import Path
 import os
-from omegaconf import OmegaConf
 from tempfile import TemporaryDirectory
 
-from ..core.artifacts.datamodel import DeepchecksArtifact, ArtifactPaths
+from ..core.artifacts.datamodel import DeepchecksArtifact, ArtifactPaths,TrainingArtifacts
 from ..utils.config import DeepchecksConfig
 
 
@@ -116,24 +115,28 @@ class MLflowManager:
         assert artifacts[0].is_file(), "The artifact should be a file"
         return str(artifacts[0])
     
-    def get_run_parameters(self) -> pd.DataFrame:
+    def get_run_parameters(self) -> Dict[str,Any]:
         return self.current_run.data.params
 
-    def get_deepchecks_artifacts(self) -> Tuple[DeepchecksConfig, DeepchecksArtifact]:
-        deepchecks = self.client.download_artifacts(self.run_id, "deepchecks", dst_path=self.dwnd_dir)
-        artifacts = list(Path(deepchecks).iterdir())
-        assert len(artifacts) == 2, "There should be two artifacts in the deepchecks"
-        # load config and artifacts
-        config = os.path.join(deepchecks, ArtifactPaths.DEEPCHECKS_CONFIG.value)
-        config = DeepchecksConfig.from_dict(OmegaConf.load(config))
+    def get_deepchecks_artifacts(self) -> DeepchecksArtifact:
+        deepchecks = self.client.download_artifacts(self.run_id, ArtifactPaths.DEEPCHECKS.value, dst_path=self.dwnd_dir)
         artifacts = os.path.join(deepchecks, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
-        artifacts = DeepchecksArtifact.from_dict(OmegaConf.load(artifacts))
-        return config, artifacts
+        artifacts = DeepchecksArtifact.from_file(artifacts)
+        
+        if artifacts.config is None:
+            config = os.path.join(deepchecks, ArtifactPaths.DEEPCHECKS_CONFIG.value)
+            config = DeepchecksConfig.from_file(config)
+            artifacts.config = config
 
-    def get_training_artifacts(self) -> pd.DataFrame:
+        return artifacts
+
+    def get_training_artifacts(self) -> TrainingArtifacts:
         training = self.client.download_artifacts(self.run_id, ArtifactPaths.TRAINING.value, dst_path=self.dwnd_dir)
         metrics = os.path.join(training, ArtifactPaths.TRAINING_METRICS.value)
-        return pd.read_csv(metrics)
+        return TrainingArtifacts(metrics_path=metrics,
+                                metrics_values=pd.read_csv(metrics),
+                                params=self.get_run_parameters(),
+                                )
 
     def add_artifact(self, artifact_key: str, local_path: str) -> None:
         self.client.log_artifact(run_id=self.run_id, artifact_path=artifact_key, local_path=local_path)

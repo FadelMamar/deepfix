@@ -7,7 +7,7 @@ in various formats (YAML, JSON) with schema validation and defaults.
 
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, Union
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
@@ -28,6 +28,10 @@ class DeepchecksConfig(BaseModel):
     @classmethod
     def from_dict(cls, config: Union[Dict[str, Any], DictConfig]) -> "DeepchecksConfig":
         return cls(**config)
+        
+    @classmethod
+    def from_file(cls, file_path: str) -> "DeepchecksConfig":
+        return cls.from_dict(OmegaConf.load(file_path))
 
 class DVCConfig(BaseModel):
     remote: str = Field(default="origin")

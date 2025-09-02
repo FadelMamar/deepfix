@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+import os
 import shutil
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+import pandas as pd
 
 from .repository import ArtifactRepository
 from .services import LocalPathResolver, ChecksumService
-from .datamodel import ArtifactRecord, ArtifactStatus
+from .datamodel import ArtifactRecord, ArtifactStatus, ArtifactPaths, DeepchecksArtifact, TrainingArtifacts
 from ...integrations.mlflow import MLflowManager
+from ...utils.config import DeepchecksConfig
 
 
 class ArtifactsManager:
@@ -93,6 +96,43 @@ class ArtifactsManager:
         if download_if_missing:
             return self.ensure_downloaded(run_id, artifact_key)
         return None
+    
+    def load_artifact(self, run_id: str, 
+                    artifact_key: str,
+                    download_if_missing: bool = True) -> Union[DeepchecksArtifact, TrainingArtifacts, str]:
+
+        path = self.get_local_path(run_id, artifact_key, download_if_missing)
+        if artifact_key == ArtifactPaths.DEEPCHECKS.value:
+            return self.load_deepchecks_artifacts(path)
+        elif artifact_key == ArtifactPaths.TRAINING.value:
+            return self.load_training_artifacts(path)
+        elif artifact_key == ArtifactPaths.MODEL_CHECKPOINT.value:
+            return self.load_model_checkpoint(path)
+        else:
+            raise ValueError(f"Artifact key {artifact_key} not supported")
+    
+    def load_training_artifacts(self, local_path: str) -> TrainingArtifacts:
+        metrics = os.path.join(local_path, ArtifactPaths.TRAINING_METRICS.value)
+        return TrainingArtifacts(metrics_path=metrics,
+                                 metrics_values=pd.read_csv(metrics),
+                                 params=self.mlflow.get_run_parameters(),
+                                )
+    
+    def load_deepchecks_artifacts(self, local_path: str) -> DeepchecksArtifact:
+        artifacts = os.path.join(local_path, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
+        artifacts = DeepchecksArtifact.from_file(artifacts)       
+        if artifacts.config is None:
+            config = os.path.join(local_path, ArtifactPaths.DEEPCHECKS_CONFIG.value)
+            config = DeepchecksConfig.from_file(config)
+            artifacts.config = config
+        return artifacts
+
+    def load_model_checkpoint(self, local_path: str) -> str:
+        best_checkpoint = os.path.join(local_path, ArtifactPaths.MODEL_CHECKPOINT.value)
+        artifacts = list(Path(best_checkpoint).iterdir())
+        assert len(artifacts) == 1, "There should be only one artifact in the best checkpoint"
+        assert artifacts[0].is_file(), "The artifact should be a file, but got a directory."
+        return str(artifacts[0])
 
     def list_artifacts(
         self,

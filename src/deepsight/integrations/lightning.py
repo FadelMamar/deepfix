@@ -15,6 +15,7 @@ from ..utils.logging import get_logger
 from .deepchecks import DeepchecksRunner
 from ..utils.config import DeepchecksConfig
 from ..core.data import ClassificationVisionDataLoader
+from ..core.artifacts.datamodel import ArtifactPaths
 
 LOGGER = get_logger(__name__)
 
@@ -78,16 +79,12 @@ class DeepSightCallback(Callback):
             with mlflow.start_run(run_id=self.mlflow_run_id,log_system_metrics=True):
                 try:
                     with tempfile.TemporaryDirectory() as tmp_dir:
-                        # save config
-                        config_path = os.path.join(tmp_dir, "config.yaml")
-                        OmegaConf.save(self.deepchecks_config.model_dump(), config_path)
-                        mlflow.log_artifact(config_path, "deepchecks")
-                        # save artifacts
-                        artifacts_path = os.path.join(tmp_dir, "artifacts.yaml")
+                        artifacts.config = self.deepchecks_config
+                        artifacts_path = os.path.join(tmp_dir, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
                         OmegaConf.save(artifacts.to_dict(), artifacts_path)
-                        mlflow.log_artifact(artifacts_path, "deepchecks")
+                        mlflow.log_artifact(artifacts_path, ArtifactPaths.DEEPCHECKS.value)
                 except Exception:
-                    LOGGER.error(f"Error logging best model: {traceback.format_exc()}")
+                    LOGGER.error(f"Error logging deepchecks: {traceback.format_exc()}")
         return None
     
     def load_vision_data(self,train_data:Dataset,batch_size:int,
@@ -105,9 +102,9 @@ class DeepSightCallback(Callback):
             with mlflow.start_run(run_id=self.mlflow_run_id,log_system_metrics=True):
                 try:
                     mlflow.log_metric("best_model_score", self.best_model_score)
-                    mlflow.log_artifact(str(self.best_model_path), "best_checkpoint")
+                    mlflow.log_artifact(str(self.best_model_path), ArtifactPaths.MODEL_CHECKPOINT.value)
                 except Exception:
-                    LOGGER.error(f"Error logging best model: {traceback.format_exc()}")
+                    LOGGER.error(f"Error logging model checkpoint: {traceback.format_exc()}")
         else:
             LOGGER.warning("No mlflow run_id or best_model_path found")
 

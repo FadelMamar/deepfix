@@ -1,6 +1,7 @@
 from .datamodel import (DeepchecksArtifact, ArtifactRecord,
                         ArtifactStatus, DeepchecksResultHeaders, 
-                        DeepchecksParsedResult
+                        DeepchecksParsedResult,
+                        TrainingArtifacts,ArtifactPaths
                         )
 from .manager import ArtifactsManager
 from .repository import ArtifactRepository
@@ -12,7 +13,8 @@ __all__ = [
     "ArtifactStatus",
     "DeepchecksResultHeaders",
     "DeepchecksParsedResult",
-    "ClassificationDataset",
+    "TrainingArtifacts",
+    "ArtifactPaths",
     "ArtifactsManager",
     "ArtifactRepository",
     "LocalPathResolver",
