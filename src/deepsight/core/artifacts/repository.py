@@ -94,8 +94,8 @@ class ArtifactRepository:
             rec.local_path = local_path
             rec.status = status
             if local_path:
-                rec.downloaded_at = datetime.utcnow()
-            rec.updated_at = datetime.utcnow()
+                rec.downloaded_at = datetime.now()
+            rec.updated_at = datetime.now()
             s.add(rec)
             s.commit()
             s.refresh(rec)
@@ -111,8 +111,8 @@ class ArtifactRepository:
             ).one_or_none()
             if rec is None:
                 return
-            rec.last_accessed_at = datetime.utcnow()
-            rec.updated_at = datetime.utcnow()
+            rec.last_accessed_at = datetime.now()
+            rec.updated_at = datetime.now()
             s.add(rec)
             s.commit()
 

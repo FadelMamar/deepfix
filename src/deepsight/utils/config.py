@@ -6,7 +6,8 @@ in various formats (YAML, JSON) with schema validation and defaults.
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
+from omegaconf import DictConfig
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
@@ -25,7 +26,7 @@ class DeepchecksConfig(BaseModel):
     batch_size: int = Field(default=16,description="Batch size to use for the suites")
 
     @classmethod
-    def from_dict(cls, config: Dict[str, Any]) -> "DeepchecksConfig":
+    def from_dict(cls, config: Union[Dict[str, Any], DictConfig]) -> "DeepchecksConfig":
         return cls(**config)
 
 class DVCConfig(BaseModel):

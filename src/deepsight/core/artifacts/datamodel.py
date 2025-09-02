@@ -11,6 +11,15 @@ from sqlalchemy import (Column, DateTime, Integer,
 from datetime import datetime
 from omegaconf import DictConfig
 
+class ArtifactPaths(Enum):
+    # training artifacts
+    TRAINING = "training_artifacts"
+    TRAINING_METRICS = "metrics.csv"
+    MODEL_CHECKPOINT = "best_checkpoint"
+    # deepchecks artifacts
+    DEEPCHECKS = "deepchecks"
+    DEEPCHECKS_CONFIG = "config.yaml"
+    DEEPCHECKS_ARTIFACTS = "artifacts.yaml"
 
 ## Deepchecks
 class DeepchecksResultHeaders(Enum):
@@ -80,7 +89,6 @@ class ArtifactStatus(str, Enum):
     MISSING = "MISSING"
     ERROR = "ERROR"
 
-
 class ArtifactRecord(SQLModel, table=True):
     __tablename__ = "artifacts"
     __table_args__ = (
@@ -118,16 +126,16 @@ class ArtifactRecord(SQLModel, table=True):
         default=None, sa_column=Column(DateTime(timezone=False), nullable=True)
     )
     created_at: datetime = SQLField(
-        default_factory=datetime.now(),
-        sa_column=Column(DateTime(timezone=False), nullable=False, default=datetime.now()),
+        default_factory=datetime.now,
+        sa_column=Column(DateTime(timezone=False), nullable=False, default=datetime.now),
     )
     updated_at: datetime = SQLField(
-        default_factory=datetime.now(),
+        default_factory=datetime.now,
         sa_column=Column(
             DateTime(timezone=False),
             nullable=False,
-            default=datetime.now(),
-            onupdate=datetime.now(),
+            default=datetime.now,
+            onupdate=datetime.now,
         ),
     )
 

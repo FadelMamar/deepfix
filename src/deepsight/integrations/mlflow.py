@@ -16,8 +16,9 @@ import pandas as pd
 from pathlib import Path
 import os
 from omegaconf import OmegaConf
+from tempfile import TemporaryDirectory
 
-from ..core.artifacts.datamodel import DeepchecksArtifact
+from ..core.artifacts.datamodel import DeepchecksArtifact, ArtifactPaths
 from ..utils.config import DeepchecksConfig
 
 
@@ -88,18 +89,28 @@ class MLflowManager:
         metric_history = metric_history.sort_values(by='step', ascending=True)  
         return metric_history
     
-    def get_run_metric_histories(self,metric_names: List[str]) -> pd.DataFrame:
+    def get_run_metric_histories(self,metric_names: List[str],log_as_artifact: bool = False) -> pd.DataFrame:
         assert isinstance(metric_names, list), "Metric names must be a list"
         assert len(metric_names) > 0, "Metric names must be a non-empty list"
         assert all(isinstance(metric_name, str) for metric_name in metric_names), "Metric names must be a list of strings"
         df = pd.concat([self._get_run_metric_history(metric_name) for metric_name in metric_names]).reset_index(drop=True)
+
+        if log_as_artifact:
+            with TemporaryDirectory() as tmp:
+                path = os.path.join(tmp, ArtifactPaths.TRAINING_METRICS.value)
+                df.to_csv(path, index=False)
+                self.add_artifact(ArtifactPaths.TRAINING.value, path)
+
         return df
 
     def get_run_tags(self) -> Dict[str, Any]:
         return self.current_run.data.tags
             
     def get_model_checkpoint(self) -> str:
-        best_checkpoint = self.client.download_artifacts(self.run_id, "best_checkpoint", dst_path=self.dwnd_dir)
+        best_checkpoint = self.client.download_artifacts(self.run_id, 
+                                                        ArtifactPaths.MODEL_CHECKPOINT.value,
+                                                        dst_path=self.dwnd_dir
+                                                    )
         artifacts = list(Path(best_checkpoint).iterdir())
         assert len(artifacts) == 1, "There should be only one artifact in the best checkpoint"
         assert artifacts[0].is_file(), "The artifact should be a file"
@@ -113,11 +124,17 @@ class MLflowManager:
         artifacts = list(Path(deepchecks).iterdir())
         assert len(artifacts) == 2, "There should be two artifacts in the deepchecks"
         # load config and artifacts
-        config = os.path.join(deepchecks, "config.yaml")
-        config = DeepchecksConfig.from_dict(dict(OmegaConf.load(config)))
-        artifacts = os.path.join(deepchecks, "artifacts.yaml")
-        artifacts = dict(OmegaConf.load(artifacts))
-        artifacts = DeepchecksArtifact.from_dict(artifacts)
+        config = os.path.join(deepchecks, ArtifactPaths.DEEPCHECKS_CONFIG.value)
+        config = DeepchecksConfig.from_dict(OmegaConf.load(config))
+        artifacts = os.path.join(deepchecks, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
+        artifacts = DeepchecksArtifact.from_dict(OmegaConf.load(artifacts))
         return config, artifacts
 
+    def get_training_artifacts(self) -> pd.DataFrame:
+        training = self.client.download_artifacts(self.run_id, ArtifactPaths.TRAINING.value, dst_path=self.dwnd_dir)
+        metrics = os.path.join(training, ArtifactPaths.TRAINING_METRICS.value)
+        return pd.read_csv(metrics)
+
+    def add_artifact(self, artifact_key: str, local_path: str) -> None:
+        self.client.log_artifact(run_id=self.run_id, artifact_path=artifact_key, local_path=local_path)
 

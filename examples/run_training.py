@@ -36,7 +36,6 @@ def load_food_dataset(embedding_model:Optional[FeatureExtractor] = None):
 
 def main():
     embedding_model = None #FeatureExtractor(model_name="timm/vit_base_patch14_reg4_dinov2.lvd142m")
-
     train_dataset, val_dataset = load_food_dataset(embedding_model)
 
     config = ClassificationTrainerConfig(
@@ -82,6 +81,7 @@ def main():
         filename="best-{epoch:02d}",
         save_weights_only=True,
     )
+        
     model = TimmClassificationModel(
         model_name="timm/mobilenetv4_hybrid_large.e600_r384_in1k",
         num_classes=train_dataset.num_classes,
@@ -90,11 +90,11 @@ def main():
         num_layers=2,
         dropout=0.2
     )
-   # model = ClassifierHead(input_dim=embedding_model.feature_dim,
-   #  num_classes=train_dataset.num_classes,
-   # num_layers=2,
-   # hidden_dim=384,
-   # dropout=0.2)
+    #model = ClassifierHead(input_dim=embedding_model.feature_dim,
+    #                        num_classes=train_dataset.num_classes,
+    #                        num_layers=2,
+    #                        hidden_dim=384,
+    #                        dropout=0.2)
 
     deepchecks_config = DeepchecksConfig(
         train_test_validation=True,
@@ -108,13 +108,13 @@ def main():
         max_samples=1000,
         random_state=42,
     )
+
     deepsight_callback = DeepSightCallback(config.model_dump(),
                                         dataset_name="food101",
                                         deepchecks_config=deepchecks_config,
                                         train_dataset=train_dataset,
                                         val_dataset=val_dataset
                             )
-
     
     trainer = ClassificationTrainer(config)
     trainer.run(model=model,
