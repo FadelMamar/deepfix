@@ -224,6 +224,7 @@ mlflow.db
 
 /data/
 /checkpoints/
+/tmp/
 
 # Marimo
 marimo/_static/

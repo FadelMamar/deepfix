@@ -1,6 +1,16 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from enum import Enum
+from sqlmodel import SQLModel, Field as SQLField
+from sqlalchemy import (Column, DateTime, Integer, 
+                        String, Enum as SAEnum, 
+                        JSON, Index, 
+                        UniqueConstraint)
+from datetime import datetime
+from omegaconf import DictConfig
+
 
 ## Deepchecks
 class DeepchecksResultHeaders(Enum):
@@ -29,7 +39,7 @@ class DeepchecksParsedResult(BaseModel):
         return dumped_dict
     
     @classmethod
-    def from_dict(self,d:Dict[str,Any])->"DeepchecksParsedResult":
+    def from_dict(self,d:Union[Dict[str,Any],DictConfig])->"DeepchecksParsedResult":
         return DeepchecksParsedResult(header=d["header"],
                             json_result=d["json_result"],
                             display_images=d["display_images"],
@@ -45,9 +55,9 @@ class DeepchecksArtifact(BaseModel):
         return dumped_dict
     
     @classmethod
-    def from_dict(self,d:Dict[str,Any])->"DeepchecksArtifact":
+    def from_dict(self,d:Union[Dict[str,Any],DictConfig])->"DeepchecksArtifact":
         return DeepchecksArtifact(dataset_name=d["dataset_name"],
-                            results={k:DeepchecksParsedResult.from_dict(v) for k,v in d["results"].items()})
+                            results={k:[DeepchecksParsedResult.from_dict(r) for r in v] for k,v in d["results"].items()})
 
 ## Dataset
 class ClassificationDataElement(BaseModel):
@@ -62,3 +72,62 @@ class ClassificationDataset(BaseModel):
     data: List[ClassificationDataElement] = Field(description="Data of the dataset")
     embedding_model: Optional[str] = Field(default=None,description="Name of the embedding model used to generate the embeddings")
     embedding_model_params: Optional[Dict[str,Any]] = Field(default=None,description="Params of the embedding model")
+
+# SQLModel
+class ArtifactStatus(str, Enum):
+    REGISTERED = "REGISTERED"
+    DOWNLOADED = "DOWNLOADED"
+    MISSING = "MISSING"
+    ERROR = "ERROR"
+
+
+class ArtifactRecord(SQLModel, table=True):
+    __tablename__ = "artifacts"
+    __table_args__ = (
+        UniqueConstraint("run_id", "artifact_key", name="uq_run_id_artifact_key"),
+        Index("idx_artifacts_run_id", "run_id"),
+        Index("idx_artifacts_status", "status"),
+        Index("idx_artifacts_mlflow_run_id", "mlflow_run_id"),
+    )
+
+    id: Optional[int] = SQLField(
+        default=None,
+        sa_column=Column(Integer, primary_key=True, autoincrement=True),
+    )
+    run_id: str = SQLField(sa_column=Column(String, nullable=False))
+    mlflow_run_id: Optional[str] = SQLField(default=None, sa_column=Column(String, nullable=True))
+    artifact_key: str = SQLField(sa_column=Column(String, nullable=False))
+    source_uri: Optional[str] = SQLField(default=None, sa_column=Column(String, nullable=True))
+    local_path: Optional[str] = SQLField(default=None, sa_column=Column(String, nullable=True))
+    size_bytes: Optional[int] = SQLField(default=None, sa_column=Column(Integer, nullable=True))
+    checksum_sha256: Optional[str] = SQLField(default=None, sa_column=Column(String, nullable=True))
+    status: ArtifactStatus = SQLField(
+        default=ArtifactStatus.REGISTERED,
+        sa_column=Column(SAEnum(ArtifactStatus), nullable=False),
+    )
+    metadata_json: Optional[Dict[str, Any]] = SQLField(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
+    tags_json: Optional[Dict[str, Any]] = SQLField(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
+    downloaded_at: Optional[datetime] = SQLField(
+        default=None, sa_column=Column(DateTime(timezone=False), nullable=True)
+    )
+    last_accessed_at: Optional[datetime] = SQLField(
+        default=None, sa_column=Column(DateTime(timezone=False), nullable=True)
+    )
+    created_at: datetime = SQLField(
+        default_factory=datetime.now(),
+        sa_column=Column(DateTime(timezone=False), nullable=False, default=datetime.now()),
+    )
+    updated_at: datetime = SQLField(
+        default_factory=datetime.now(),
+        sa_column=Column(
+            DateTime(timezone=False),
+            nullable=False,
+            default=datetime.now(),
+            onupdate=datetime.now(),
+        ),
+    )
+
