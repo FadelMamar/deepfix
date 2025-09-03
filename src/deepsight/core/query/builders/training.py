@@ -12,6 +12,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import math
+from omegaconf import OmegaConf
+
 from .base import BasePromptBuilder
 from ...artifacts.datamodel import TrainingArtifacts
 
@@ -68,8 +70,9 @@ class TrainingPromptBuilder(BasePromptBuilder):
         return artifact_type == 'TrainingArtifacts'
     
     def build_prompt(
-        self, 
-        artifact: TrainingArtifacts, 
+        self,
+        artifact: TrainingArtifacts,
+        plot_curves: bool = False,
         context: Optional[Dict[str, Any]] = None
     ) -> str:
         """Build structured prompt from TrainingArtifacts."""
@@ -79,12 +82,18 @@ class TrainingPromptBuilder(BasePromptBuilder):
         ]
         
         # Add metrics analysis if available
-        if artifact.metrics_values is not None:
+        if artifact.metrics_values is not None and plot_curves:
             plotter = CurvePlotter()
             plot_path = Path(artifact.metrics_path).with_suffix('.png').with_stem('training_curves')
             plotter.plot(artifact.metrics_values,save_path=plot_path)
             prompt_parts.append(f"\nTraining curves:")
-            prompt_parts.append(f"- Open the image file to see the training curves: {plot_path}")            
+            prompt_parts.append(f"- Open the image file to see the training curves: {plot_path}")     
+        else:
+            prompt_parts.append(f"\nTraining curves:")
+            flat_metrics = {}
+            for name,df in artifact.metrics_values.groupby('key'):
+                flat_metrics[name] = df.sort_values(by=['step'])['value'].to_list()
+            prompt_parts.append(f"- Parse the training curves from the metrics values:\n {OmegaConf.to_yaml(flat_metrics)}")
             
         # Add training parameters if available
         if artifact.params:

@@ -12,13 +12,12 @@ class CursorConfig(BaseModel):
     timeout: int = Field(default=300,description="Timeout to use for Cursor CLI integration")
     cli_path: str = Field(default="cursor-agent",description="Path to the Cursor CLI executable")
     working_directory: Optional[str] = Field(default=None,description="Working directory to use for Cursor CLI integration")
-    additional_args: Optional[Dict[str, Any]] = Field(default=None,description="Additional arguments to use for Cursor CLI integration")
         
     def to_cli_args(self) -> list[str]:
         """Convert configuration to CLI arguments."""
         args = [
             self.cli_path,
-            "-p",  # prompt flag
+            "-p",  # non-interactive mode
         ]
         
         # Add model if specified
@@ -29,7 +28,7 @@ class CursorConfig(BaseModel):
         if self.output_format:
             args.extend(["--output-format", self.output_format])
         
-        # Add additional arguments
+        # Add additional arguments (but exclude 'additional_args' itself)
         if self.additional_args:
             for key, value in self.additional_args.items():
                 if isinstance(value, bool):

@@ -8,10 +8,11 @@ This module provides comprehensive MLflow integration including:
 - Metric aggregation and analysis
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 import mlflow
 from mlflow.tracking import MlflowClient
 from mlflow.entities import Run, Experiment
+from omegaconf import OmegaConf
 import pandas as pd
 from pathlib import Path
 import os
@@ -20,6 +21,9 @@ from tempfile import TemporaryDirectory
 from ..core.artifacts.datamodel import DeepchecksArtifact, ArtifactPaths,TrainingArtifacts
 from ..utils.config import DeepchecksConfig
 
+from ..utils.logging import get_logger
+
+LOGGER = get_logger(__name__)
 
 class MLflowManager:
     """
@@ -29,7 +33,7 @@ class MLflowManager:
     def __init__(self, tracking_uri: Optional[str] = None,
                 experiment_name: Optional[str] = None,
                 run_id: Optional[str] = None,
-                dwnd_dir: str = "."
+                dwnd_dir: str = "mlflow_downloads"
             ):
         """
         Initialize MLflow client with tracking configuration.
@@ -50,6 +54,10 @@ class MLflowManager:
         
         if run_id:
             self.set_run(run_id)
+            self.dwnd_dir = str(Path(self.dwnd_dir) / self.run_id)
+        
+        # create directory if it doesn't exist
+        Path(self.dwnd_dir).mkdir(parents=True, exist_ok=True)
     
     def set_experiment(self, experiment_name: str) -> None:
         """
@@ -71,6 +79,9 @@ class MLflowManager:
         self.run_id = run_id
     
     def get_run_info(self) -> Dict[str, Any]:
+        if self.current_run is None:
+            raise ValueError("Run not set")
+
         info = dict(id=self.current_run.info.run_id,
             experiment_id=self.current_run.info.experiment_id,
             user_id=self.current_run.info.user_id,
@@ -80,6 +91,8 @@ class MLflowManager:
         return info
 
     def get_run_metrics(self) -> Dict[str, Any]:
+        if self.current_run is None:
+            raise ValueError("Run not set")
         return self.current_run.data.metrics
     
     def _get_run_metric_history(self, metric_name: str) -> pd.DataFrame:
@@ -103,9 +116,12 @@ class MLflowManager:
         return df
 
     def get_run_tags(self) -> Dict[str, Any]:
+        if self.current_run is None:
+            raise ValueError("Run not set")
         return self.current_run.data.tags
             
     def get_model_checkpoint(self) -> str:
+        LOGGER.info(f"Downloading model checkpoint for run {self.run_id}")
         best_checkpoint = self.client.download_artifacts(self.run_id, 
                                                         ArtifactPaths.MODEL_CHECKPOINT.value,
                                                         dst_path=self.dwnd_dir
@@ -116,9 +132,12 @@ class MLflowManager:
         return str(artifacts[0])
     
     def get_run_parameters(self) -> Dict[str,Any]:
+        if self.current_run is None:
+            raise ValueError("Run not set")
         return self.current_run.data.params
 
     def get_deepchecks_artifacts(self) -> DeepchecksArtifact:
+        LOGGER.info(f"Downloading deepchecks artifacts for run {self.run_id}")
         deepchecks = self.client.download_artifacts(self.run_id, ArtifactPaths.DEEPCHECKS.value, dst_path=self.dwnd_dir)
         artifacts = os.path.join(deepchecks, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
         artifacts = DeepchecksArtifact.from_file(artifacts)
@@ -129,15 +148,31 @@ class MLflowManager:
             artifacts.config = config
 
         return artifacts
+    
+    def get_local_path(self, artifact_key: Union[str, ArtifactPaths],download_if_missing: bool = True) -> str:
+        artifact_key = ArtifactPaths(artifact_key) if isinstance(artifact_key, str) else artifact_key
+        if download_if_missing:
+            return self.client.download_artifacts(self.run_id, artifact_key.value, dst_path=self.dwnd_dir)
+        else:
+            path = os.path.join(self.dwnd_dir, artifact_key.value)
+            return path
 
     def get_training_artifacts(self) -> TrainingArtifacts:
+        LOGGER.info(f"Downloading training artifacts for run {self.run_id}")
         training = self.client.download_artifacts(self.run_id, ArtifactPaths.TRAINING.value, dst_path=self.dwnd_dir)
         metrics = os.path.join(training, ArtifactPaths.TRAINING_METRICS.value)
+        # get params and save them as an artifact
+        params = self.get_run_parameters()
+        params_path = os.path.join(training, ArtifactPaths.TRAINING_PARAMS.value)
+        OmegaConf.save(config=params, f=params_path)
+        self.add_artifact(ArtifactPaths.TRAINING.value, params_path)
+        # read metrics
         return TrainingArtifacts(metrics_path=metrics,
                                 metrics_values=pd.read_csv(metrics),
-                                params=self.get_run_parameters(),
+                                params=params,
                                 )
 
     def add_artifact(self, artifact_key: str, local_path: str) -> None:
+        LOGGER.info(f"Adding artifact {artifact_key} for run {self.run_id}")
         self.client.log_artifact(run_id=self.run_id, artifact_path=artifact_key, local_path=local_path)
 

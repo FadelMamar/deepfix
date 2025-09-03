@@ -5,11 +5,14 @@ This module provides the QueryGenerator class and related components for
 orchestrating LLM prompt generation from existing Pydantic models.
 """
 
-from .generator import QueryGenerator, QueryGeneratorConfig
-from .builders import DeepchecksPromptBuilder, TrainingPromptBuilder
+from .builders import DeepchecksPromptBuilder, TrainingPromptBuilder, QueryGenerator
+from .builders.config import QueryGeneratorConfig, QueryType
 __all__ = [
     "QueryGenerator",
     "QueryGeneratorConfig", 
     "DeepchecksPromptBuilder",
     "TrainingPromptBuilder",
+    "QueryGenerator",
+    "QueryGeneratorConfig",
+    "QueryType",
 ]

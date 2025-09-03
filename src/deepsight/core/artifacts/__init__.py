@@ -5,7 +5,7 @@ from .datamodel import (DeepchecksArtifact, ArtifactRecord,
                         )
 from .manager import ArtifactsManager
 from .repository import ArtifactRepository
-from .services import LocalPathResolver, ChecksumService
+from .services import ChecksumService
 
 __all__ = [
     "DeepchecksArtifact",
@@ -17,6 +17,5 @@ __all__ = [
     "ArtifactPaths",
     "ArtifactsManager",
     "ArtifactRepository",
-    "LocalPathResolver",
     "ChecksumService",
 ]

@@ -26,16 +26,14 @@ class BasePromptBuilder(ABC):
         
     @abstractmethod
     def build_prompt(
-        self, 
-        artifact: Union[DeepchecksArtifact, TrainingArtifacts], 
-        query_type: str,
+        self,
+        artifact: Union[DeepchecksArtifact, TrainingArtifacts],
         context: Optional[Dict[str, Any]] = None
     ) -> str:
         """Build structured prompt from artifact.
         
         Args:
             artifact: The artifact to build a prompt for
-            query_type: The type of query (e.g., 'analysis', 'overfitting_analysis')
             context: Additional context for the prompt
             
         Returns:

@@ -8,7 +8,7 @@ from DeepchecksArtifact instances.
 from typing import Optional, Dict, Any, List, Union
 from .base import BasePromptBuilder
 from ...artifacts.datamodel import DeepchecksArtifact, DeepchecksParsedResult,DeepchecksResultHeaders
-from ..config import QueryType
+from .config import QueryType
 from pydantic import BaseModel
 import re
 import json
@@ -103,15 +103,12 @@ class DeepchecksPromptBuilder(BasePromptBuilder):
         return artifact_type == 'DeepchecksArtifact'
     
     def build_prompt(
-        self, 
-        artifact: DeepchecksArtifact, 
-        query_type: Union[QueryType, str]=QueryType.ANALYSIS,
+        self,
+        artifact: DeepchecksArtifact,
         context: Optional[Dict[str, Any]] = None,
         exclude_fields_from_result: list[str] = ['value','params','link_in_summary'],
         exclude_empty_conditions_results: bool = True
     ) -> str:
-
-        query_type = QueryType(query_type) if isinstance(query_type, str) else query_type
 
         extractor = Extractor()
 

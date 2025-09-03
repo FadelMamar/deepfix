@@ -21,6 +21,7 @@ class ArtifactPaths(Enum):
     TRAINING = "training_artifacts"
     TRAINING_METRICS = "metrics.csv"
     MODEL_CHECKPOINT = "best_checkpoint"
+    TRAINING_PARAMS = "params.yaml"
     # deepchecks artifacts
     DEEPCHECKS = "deepchecks"
     DEEPCHECKS_CONFIG = "config.yaml"

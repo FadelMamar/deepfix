@@ -6,9 +6,11 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional, Union
 import pandas as pd
+import yaml
+import traceback
 
 from .repository import ArtifactRepository
-from .services import LocalPathResolver, ChecksumService
+from .services import ChecksumService
 from .datamodel import ArtifactRecord, ArtifactStatus, ArtifactPaths, DeepchecksArtifact, TrainingArtifacts
 from ...integrations.mlflow import MLflowManager
 from ...utils.config import DeepchecksConfig
@@ -22,23 +24,23 @@ class ArtifactsManager:
         mlflow_manager: MLflowManager,
     ) -> None:
         self.repo = ArtifactRepository(sqlite_path)
-        self.path_resolver = LocalPathResolver(artifacts_root)
         self.checksum = ChecksumService()
         self.mlflow = mlflow_manager
 
     def register_artifact(
         self,
         run_id: str,
-        artifact_key: str,
+        artifact_key: Union[str, ArtifactPaths],
         local_path: Optional[str] = None,
         source_uri: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         tags: Optional[Dict[str, Any]] = None,
     ) -> ArtifactRecord:
+        artifact_key = ArtifactPaths(artifact_key) if isinstance(artifact_key, str) else artifact_key
         record = ArtifactRecord(
             run_id=run_id,
             mlflow_run_id=self.mlflow.run_id,
-            artifact_key=artifact_key,
+            artifact_key=artifact_key.value,
             source_uri=source_uri or self.mlflow.tracking_uri,
             local_path=local_path,
             status=ArtifactStatus.REGISTERED,
@@ -48,21 +50,17 @@ class ArtifactsManager:
         return self.repo.upsert(record)
 
     def ensure_downloaded(self, run_id: str, artifact_key: str) -> Path:
-        local_path = self.path_resolver.resolve(run_id, artifact_key)
+        local_path = self.mlflow.get_local_path(artifact_key,download_if_missing=False)
         
         rec = self.repo.get(run_id, artifact_key)
         if rec and rec.local_path and Path(rec.local_path).exists():
             self.repo.touch_access(run_id, artifact_key)
             return Path(rec.local_path)
 
-        downloaded_dir = self.mlflow.client.download_artifacts(
-            run_id, artifact_key, dst_path=str(local_path.parent)
-        )
-        # MLflow may download into a directory; if artifact_key points to file keep path
+        downloaded_dir = self.mlflow.get_local_path(artifact_key,download_if_missing=True)
         candidate = Path(downloaded_dir)
         final_path = candidate if candidate.is_file() else local_path
         if candidate.is_dir():
-            # If a directory, set final path to the directory path
             final_path = candidate
 
         checksum = None
@@ -113,9 +111,14 @@ class ArtifactsManager:
     
     def load_training_artifacts(self, local_path: str) -> TrainingArtifacts:
         metrics = os.path.join(local_path, ArtifactPaths.TRAINING_METRICS.value)
+        params = os.path.join(local_path, ArtifactPaths.TRAINING_PARAMS.value)
+        if not os.path.exists(params):
+            return self.mlflow.get_training_artifacts()
+        with open(params, "r") as f:
+            params = yaml.safe_load(f)
         return TrainingArtifacts(metrics_path=metrics,
                                  metrics_values=pd.read_csv(metrics),
-                                 params=self.mlflow.get_run_parameters(),
+                                 params=params,
                                 )
     
     def load_deepchecks_artifacts(self, local_path: str) -> DeepchecksArtifact:
