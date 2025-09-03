@@ -236,44 +236,9 @@ Each example uses consistent configuration patterns:
 2. **Validate Data**: Use `run_suite_of_checks.py` to validate your data
 3. **Manage Artifacts**: Use `run_artifact_manager.py` to explore artifacts
 4. **Generate Insights**: Use `build_prompts.py` to get AI-powered analysis
+5. **Complete Analysis**: Use `advisor_usage.py` for end-to-end automated analysis
 
-## Common Patterns
 
-### Import Organization
-All examples follow a consistent import pattern:
-```python
-# Standard library imports
-import logging
-from pathlib import Path
-
-# DeepSight imports
-from deepsight.core import ...
-from deepsight.integrations import ...
-from deepsight.utils import ...
-```
-
-### Error Handling
-All examples include comprehensive error handling:
-```python
-try:
-    # Main logic
-    logger.info("Operation started...")
-    # ... operations ...
-    logger.info("Operation completed successfully!")
-except Exception as e:
-    logger.error(f"Operation failed with error: {e}")
-    raise
-```
-
-### Configuration
-Configuration objects are well-documented:
-```python
-config = SomeConfig(
-    # Clear section comments
-    param1=value1,  # Inline comments for clarity
-    param2=value2,  # Explain non-obvious parameters
-)
-```
 
 ## Troubleshooting
 
