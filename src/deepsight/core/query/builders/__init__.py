@@ -12,7 +12,7 @@ from .generator import QueryGenerator
 
 __all__ = [
     "BasePromptBuilder",
-    "DeepchecksPromptBuilder", 
+    "DeepchecksPromptBuilder",
     "TrainingPromptBuilder",
     "QueryGenerator",
 ]

@@ -1,8 +1,12 @@
-from .datamodel import (DeepchecksArtifact, ArtifactRecord,
-                        ArtifactStatus, DeepchecksResultHeaders, 
-                        DeepchecksParsedResult,
-                        TrainingArtifacts,ArtifactPaths
-                        )
+from .datamodel import (
+    DeepchecksArtifact,
+    ArtifactRecord,
+    ArtifactStatus,
+    DeepchecksResultHeaders,
+    DeepchecksParsedResult,
+    TrainingArtifacts,
+    ArtifactPaths,
+)
 from .manager import ArtifactsManager
 from .repository import ArtifactRepository
 from .services import ChecksumService

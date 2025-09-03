@@ -7,9 +7,10 @@ orchestrating LLM prompt generation from existing Pydantic models.
 
 from .builders import DeepchecksPromptBuilder, TrainingPromptBuilder, QueryGenerator
 from .builders.config import QueryGeneratorConfig, QueryType
+
 __all__ = [
     "QueryGenerator",
-    "QueryGeneratorConfig", 
+    "QueryGeneratorConfig",
     "DeepchecksPromptBuilder",
     "TrainingPromptBuilder",
     "QueryGenerator",

@@ -69,7 +69,10 @@ class ArtifactRepository:
             ).one_or_none()
 
     def list_by_run(
-        self, run_id: str, prefix: Optional[str] = None, status: Optional[ArtifactStatus] = None
+        self,
+        run_id: str,
+        prefix: Optional[str] = None,
+        status: Optional[ArtifactStatus] = None,
     ) -> List[ArtifactRecord]:
         with self.session() as s:
             stmt = select(ArtifactRecord).where(ArtifactRecord.run_id == run_id)
@@ -80,7 +83,11 @@ class ArtifactRepository:
             return list(s.exec(stmt).all())
 
     def update_local_path(
-        self, run_id: str, artifact_key: str, local_path: Optional[str], status: ArtifactStatus
+        self,
+        run_id: str,
+        artifact_key: str,
+        local_path: Optional[str],
+        status: ArtifactStatus,
     ) -> Optional[ArtifactRecord]:
         with self.session() as s:
             rec = s.exec(
@@ -115,5 +122,3 @@ class ArtifactRepository:
             rec.updated_at = datetime.now()
             s.add(rec)
             s.commit()
-
-

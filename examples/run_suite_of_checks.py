@@ -25,8 +25,11 @@ import logging
 from pathlib import Path
 
 # DeepSight imports
-from deepsight.zoo.datasets.foodwaste import (get_label_mapping, 
-translations_de_en, load_train_and_val_datasets)
+from deepsight.zoo.datasets.foodwaste import (
+    get_label_mapping,
+    translations_de_en,
+    load_train_and_val_datasets,
+)
 from deepsight.zoo.timm_models import CLIPModel
 from deepsight.core.data import ClassificationVisionDataLoader
 from deepsight.integrations import DeepchecksRunner
@@ -34,13 +37,14 @@ from deepsight.utils import DeepchecksConfig
 from deepsight.utils.logging import setup_logging, get_logger
 
 # Setup logging
-setup_logging(level='INFO')
+setup_logging(level="INFO")
 logger = get_logger(__name__)
+
 
 def main():
     """
     Main function to run comprehensive data validation suites.
-    
+
     This function:
     1. Loads the dataset and label mappings
     2. Configures Deepchecks validation
@@ -50,15 +54,17 @@ def main():
     """
     try:
         logger.info("Starting DeepSight data validation example...")
-        
+
         # Load dataset and label mappings
         ing2name, ing2label = get_label_mapping()
         train_dataset, val_dataset = load_train_and_val_datasets(image_size=1024)
-        
+
         # Prepare ingredient names for CLIP model (if used)
         ingredients_en = ["a " + translations_de_en[t] for t in ing2name.values()]
-        
-        logger.info(f"Loaded dataset: {len(train_dataset)} train, {len(val_dataset)} val samples")
+
+        logger.info(
+            f"Loaded dataset: {len(train_dataset)} train, {len(val_dataset)} val samples"
+        )
         logger.info(f"Number of classes: {len(ing2name)}")
 
         # Configure Deepchecks validation
@@ -68,9 +74,9 @@ def main():
             model_evaluation=False,  # Skip model evaluation for data-only validation
             save_results=True,  # Save results to disk
             save_display=False,  # Skip saving visualizations
-            save_results_format='json',  # Save in JSON format
+            save_results_format="json",  # Save in JSON format
             parse_results=True,  # Parse results for analysis
-            output_dir='results'  # Output directory
+            output_dir="results",  # Output directory
         )
 
         # Initialize Deepchecks runner
@@ -86,34 +92,28 @@ def main():
 
         # Prepare data loaders for Deepchecks
         vision_train_data = ClassificationVisionDataLoader.load_from_dataset(
-            train_dataset, 
-            batch_size=8, 
-            shuffle=True, 
-            model=model
+            train_dataset, batch_size=8, shuffle=True, model=model
         )
         vision_test_data = ClassificationVisionDataLoader.load_from_dataset(
-            val_dataset, 
-            batch_size=8, 
-            shuffle=True, 
-            model=model
+            val_dataset, batch_size=8, shuffle=True, model=model
         )
-        
+
         logger.info("Running validation suites...")
-        
+
         # Run validation suites
         results = runner.run_suites(
-            train_data=vision_train_data, 
-            test_data=vision_test_data
+            train_data=vision_train_data, test_data=vision_test_data
         )
-        
+
         logger.info("Validation completed successfully!")
         logger.info(f"Results saved to: {config.output_dir}")
-        
+
         return results
-        
+
     except Exception as e:
         logger.error(f"Validation failed with error: {e}")
         raise
+
 
 if __name__ == "__main__":
     main()

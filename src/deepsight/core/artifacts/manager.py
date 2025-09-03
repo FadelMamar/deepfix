@@ -11,7 +11,13 @@ import traceback
 
 from .repository import ArtifactRepository
 from .services import ChecksumService
-from .datamodel import ArtifactRecord, ArtifactStatus, ArtifactPaths, DeepchecksArtifact, TrainingArtifacts
+from .datamodel import (
+    ArtifactRecord,
+    ArtifactStatus,
+    ArtifactPaths,
+    DeepchecksArtifact,
+    TrainingArtifacts,
+)
 from ...integrations.mlflow import MLflowManager
 from ...utils.config import DeepchecksConfig
 
@@ -35,7 +41,11 @@ class ArtifactsManager:
         metadata: Optional[Dict[str, Any]] = None,
         tags: Optional[Dict[str, Any]] = None,
     ) -> ArtifactRecord:
-        artifact_key = ArtifactPaths(artifact_key) if isinstance(artifact_key, str) else artifact_key
+        artifact_key = (
+            ArtifactPaths(artifact_key)
+            if isinstance(artifact_key, str)
+            else artifact_key
+        )
         record = ArtifactRecord(
             run_id=run_id,
             mlflow_run_id=self.mlflow.run_id,
@@ -49,14 +59,16 @@ class ArtifactsManager:
         return self.repo.upsert(record)
 
     def ensure_downloaded(self, run_id: str, artifact_key: str) -> Path:
-        local_path = self.mlflow.get_local_path(artifact_key,download_if_missing=False)
-        
+        local_path = self.mlflow.get_local_path(artifact_key, download_if_missing=False)
+
         rec = self.repo.get(run_id, artifact_key)
         if rec and rec.local_path and Path(rec.local_path).exists():
             self.repo.touch_access(run_id, artifact_key)
             return Path(rec.local_path)
 
-        downloaded_dir = self.mlflow.get_local_path(artifact_key,download_if_missing=True)
+        downloaded_dir = self.mlflow.get_local_path(
+            artifact_key, download_if_missing=True
+        )
         candidate = Path(downloaded_dir)
         final_path = candidate if candidate.is_file() else local_path
         if candidate.is_dir():
@@ -85,8 +97,17 @@ class ArtifactsManager:
 
         return final_path
 
-    def get_local_path(self, run_id: str, artifact_key: Union[str, ArtifactPaths], download_if_missing: bool = True) -> Optional[Path]:
-        artifact_key = ArtifactPaths(artifact_key) if isinstance(artifact_key, str) else artifact_key
+    def get_local_path(
+        self,
+        run_id: str,
+        artifact_key: Union[str, ArtifactPaths],
+        download_if_missing: bool = True,
+    ) -> Optional[Path]:
+        artifact_key = (
+            ArtifactPaths(artifact_key)
+            if isinstance(artifact_key, str)
+            else artifact_key
+        )
         artifact_key = artifact_key.value
         rec = self.repo.get(run_id, artifact_key)
         if rec and rec.local_path and Path(rec.local_path).exists():
@@ -95,11 +116,18 @@ class ArtifactsManager:
         if download_if_missing:
             return self.ensure_downloaded(run_id, artifact_key)
         return None
-    
-    def load_artifact(self, run_id: str, 
-                    artifact_key: Union[str, ArtifactPaths],
-                    download_if_missing: bool = True) -> Union[DeepchecksArtifact, TrainingArtifacts, str]:
-        artifact_key = ArtifactPaths(artifact_key) if isinstance(artifact_key, str) else artifact_key
+
+    def load_artifact(
+        self,
+        run_id: str,
+        artifact_key: Union[str, ArtifactPaths],
+        download_if_missing: bool = True,
+    ) -> Union[DeepchecksArtifact, TrainingArtifacts, str]:
+        artifact_key = (
+            ArtifactPaths(artifact_key)
+            if isinstance(artifact_key, str)
+            else artifact_key
+        )
         path = self.get_local_path(run_id, artifact_key.value, download_if_missing)
         if artifact_key == ArtifactPaths.DEEPCHECKS:
             return self.load_deepchecks_artifacts(path)
@@ -109,7 +137,7 @@ class ArtifactsManager:
             return self.load_model_checkpoint(path)
         else:
             raise ValueError(f"Artifact key {artifact_key} not supported")
-    
+
     def load_training_artifacts(self, local_path: str) -> TrainingArtifacts:
         metrics = os.path.join(local_path, ArtifactPaths.TRAINING_METRICS.value)
         params = os.path.join(local_path, ArtifactPaths.TRAINING_PARAMS.value)
@@ -117,14 +145,15 @@ class ArtifactsManager:
             return self.mlflow.get_training_artifacts()
         with open(params, "r") as f:
             params = yaml.safe_load(f)
-        return TrainingArtifacts(metrics_path=metrics,
-                                 metrics_values=pd.read_csv(metrics),
-                                 params=params,
-                                )
-    
+        return TrainingArtifacts(
+            metrics_path=metrics,
+            metrics_values=pd.read_csv(metrics),
+            params=params,
+        )
+
     def load_deepchecks_artifacts(self, local_path: str) -> DeepchecksArtifact:
         artifacts = os.path.join(local_path, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
-        artifacts = DeepchecksArtifact.from_file(artifacts)       
+        artifacts = DeepchecksArtifact.from_file(artifacts)
         if artifacts.config is None:
             config = os.path.join(local_path, ArtifactPaths.DEEPCHECKS_CONFIG.value)
             config = DeepchecksConfig.from_file(config)
@@ -134,8 +163,12 @@ class ArtifactsManager:
     def load_model_checkpoint(self, local_path: str) -> str:
         best_checkpoint = os.path.join(local_path, ArtifactPaths.MODEL_CHECKPOINT.value)
         artifacts = list(Path(best_checkpoint).iterdir())
-        assert len(artifacts) == 1, "There should be only one artifact in the best checkpoint"
-        assert artifacts[0].is_file(), "The artifact should be a file, but got a directory."
+        assert len(artifacts) == 1, (
+            "There should be only one artifact in the best checkpoint"
+        )
+        assert artifacts[0].is_file(), (
+            "The artifact should be a file, but got a directory."
+        )
         return str(artifacts[0])
 
     def list_artifacts(
@@ -156,5 +189,6 @@ class ArtifactsManager:
                 p.unlink()
             else:
                 shutil.rmtree(p)
-        self.repo.update_local_path(run_id, artifact_key, None, ArtifactStatus.REGISTERED)
-
+        self.repo.update_local_path(
+            run_id, artifact_key, None, ArtifactStatus.REGISTERED
+        )

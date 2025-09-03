@@ -6,7 +6,9 @@ from ..models import IntelligenceResponse, Capabilities
 
 class BaseProvider(ABC):
     @abstractmethod
-    def execute(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> IntelligenceResponse:
+    def execute(
+        self, prompt: str, context: Optional[Dict[str, Any]] = None
+    ) -> IntelligenceResponse:
         pass
 
     @abstractmethod

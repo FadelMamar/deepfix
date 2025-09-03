@@ -10,5 +10,3 @@ class ChecksumService:
             for chunk in iter(lambda: f.read(1024 * 1024), b""):
                 hasher.update(chunk)
         return hasher.hexdigest()
-
-

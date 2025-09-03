@@ -1,7 +1,13 @@
 from typing import Dict, Any, Optional, List
 import time
 
-from ...models import IntelligenceResponse, ProviderType, IntelligenceProviderError, Providers, Capabilities
+from ...models import (
+    IntelligenceResponse,
+    ProviderType,
+    IntelligenceProviderError,
+    Providers,
+    Capabilities,
+)
 from ..base import BaseProvider
 
 
@@ -16,7 +22,9 @@ class DspyRouter:
         self.model = model
         self.config = config
 
-    def generate(self, prompt: str, temperature: float, max_tokens: int, context: Dict[str, Any]) -> Any:
+    def generate(
+        self, prompt: str, temperature: float, max_tokens: int, context: Dict[str, Any]
+    ) -> Any:
         # Placeholder implementation. Replace with real DSPy call.
         class _Result:
             def __init__(self, content: str):
@@ -38,7 +46,9 @@ class DspyLLMProvider(BaseProvider):
         self.max_tokens = config.get("max_tokens", 2000)
         self.router = DspyRouter(backend=self.backend, model=self.model, config=config)
 
-    def execute(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> IntelligenceResponse:
+    def execute(
+        self, prompt: str, context: Optional[Dict[str, Any]] = None
+    ) -> IntelligenceResponse:
         start = time.time()
         try:
             result = self.router.generate(
@@ -52,7 +62,11 @@ class DspyLLMProvider(BaseProvider):
                 content=result.content,
                 provider=f"dspy::{self.backend}::{self.model}",
                 provider_type=ProviderType.LLM,
-                metadata={"backend": self.backend, "model": self.model, "temperature": self.temperature},
+                metadata={
+                    "backend": self.backend,
+                    "model": self.model,
+                    "temperature": self.temperature,
+                },
                 tokens_used=(result.metadata or {}).get("tokens_used"),
                 cost=(result.metadata or {}).get("cost"),
                 latency_ms=latency_ms,
@@ -61,6 +75,8 @@ class DspyLLMProvider(BaseProvider):
             raise IntelligenceProviderError(f"DSPy provider failed: {e}")
 
     def get_capabilities(self) -> List[Capabilities]:
-        return [Capabilities.TEXT_GENERATION, Capabilities.REASONING, Capabilities.IMAGE_UNDERSTANDING]
-
-
+        return [
+            Capabilities.TEXT_GENERATION,
+            Capabilities.REASONING,
+            Capabilities.IMAGE_UNDERSTANDING,
+        ]

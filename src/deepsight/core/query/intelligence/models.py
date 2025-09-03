@@ -7,9 +7,11 @@ class ProviderType(str, Enum):
     LLM = "llm"
     CODING_AGENT = "coding_agent"
 
+
 class Providers(Enum):
     CURSOR = "cursor_agent"
     DSPY = "dspy_llm"
+
 
 class Capabilities(Enum):
     TEXT_GENERATION = "text_generation"
@@ -33,5 +35,3 @@ class IntelligenceResponse(BaseModel):
 
 class IntelligenceProviderError(RuntimeError):
     pass
-
-

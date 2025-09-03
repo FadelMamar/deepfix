@@ -2,8 +2,13 @@ from typing import Dict, Any, Optional, List, Union
 import time
 import traceback
 
-from ...models import (IntelligenceResponse, ProviderType, 
-                        IntelligenceProviderError, Providers, Capabilities)
+from ...models import (
+    IntelligenceResponse,
+    ProviderType,
+    IntelligenceProviderError,
+    Providers,
+    Capabilities,
+)
 from ..base import BaseProvider
 
 from deepsight.integrations import Cursor
@@ -16,7 +21,9 @@ class CursorAgentProvider(BaseProvider):
         self.provider_type = ProviderType.CODING_AGENT
         self.agent = Cursor(**self.config.model_dump())
 
-    def execute(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> IntelligenceResponse:
+    def execute(
+        self, prompt: str, context: Optional[Dict[str, Any]] = None
+    ) -> IntelligenceResponse:
         start = time.time()
         try:
             enhanced_prompt = self._enhance_prompt_for_coding(prompt, context or {})
@@ -29,7 +36,9 @@ class CursorAgentProvider(BaseProvider):
                 latency_ms=latency_ms,
             )
         except Exception:
-            raise IntelligenceProviderError(f"Cursor agent failed: {traceback.format_exc()}")
+            raise IntelligenceProviderError(
+                f"Cursor agent failed: {traceback.format_exc()}"
+            )
 
     def _enhance_prompt_for_coding(self, prompt: str, context: Dict[str, Any]) -> str:
         parts = [
@@ -43,10 +52,9 @@ class CursorAgentProvider(BaseProvider):
         return "\n".join(parts)
 
     def get_capabilities(self) -> List[Capabilities]:
-        return [Capabilities.CODE_GENERATION, 
-                Capabilities.DEBUGGING, 
-                Capabilities.REASONING,
-                Capabilities.TEXT_GENERATION
-            ]
-
-
+        return [
+            Capabilities.CODE_GENERATION,
+            Capabilities.DEBUGGING,
+            Capabilities.REASONING,
+            Capabilities.TEXT_GENERATION,
+        ]
