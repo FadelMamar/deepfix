@@ -9,16 +9,25 @@
 
 ## 🎯 Key Features
 
+### 🤖 **DeepSight Advisor - Unified Orchestrator**
+- **End-to-End Analysis**: Complete ML analysis pipeline from artifact loading to AI-powered insights
+- **Multiple Configuration Methods**: Simple convenience functions, config objects, or dictionary-based setup
+- **Automated Workflow**: Intelligent orchestration of artifact loading, query generation, and AI analysis
+- **Comprehensive Logging**: Detailed progress tracking and execution monitoring
+- **Flexible Output**: Configurable result saving in multiple formats (JSON, YAML, text)
+
 ### 🔬 **Intelligent Model Analysis**
 - **Overfitting Detection**: Automated detection and analysis of overfitting patterns in CV models
 - **Performance Monitoring**: Real-time tracking of training metrics with intelligent alerts
 - **Learning Curve Analysis**: Advanced analysis of model behavior during training
+- **AI-Powered Insights**: Intelligent query generation and analysis from ML artifacts
 
 ### 🛠️ **MLOps Tool Integration**
 - **MLflow Integration**: Seamless experiment tracking, model registry, and artifact management
 - **Deepchecks Validation**: Automated model validation with computer vision-specific checks
 - **DVC Support**: Data versioning and pipeline management integration
 - **PyTorch Lightning**: Advanced training framework with built-in best practices
+- **Cursor AI Integration**: Direct integration with Cursor AI for enhanced analysis
 
 ### 📊 **Advanced Training Capabilities**
 - **Classification Trainer**: Production-ready trainer with configurable hyperparameters
@@ -26,10 +35,12 @@
 - **Model Zoo**: Pre-configured models including CLIP and TIMM architectures
 - **Custom Datasets**: Built-in support for various CV datasets and formats
 
-### 🔍 **Research Assistant**
+### 🔍 **Research Assistant & Query Generation**
 - **Academic Paper Discovery**: Automated literature search based on model characteristics
 - **Solution Recommendations**: Evidence-based suggestions for model improvement
 - **Problem Classification**: Intelligent categorization of training issues
+- **Intelligent Prompt Building**: AI-powered query generation from ML artifacts
+- **Multi-Provider Support**: Integration with various AI providers and LLMs
 
 ## 🚀 Quick Start
 
@@ -42,8 +53,6 @@ cd deepsight
 
 # Install with uv (recommended)
 uv sync
-
-# Or install with pip
 uv pip install -e .
 ```
 
@@ -58,7 +67,21 @@ uv pip install -e .
 mlflow server --host 0.0.0.0 --port 5000
 ```
 
-#### 2. Train a Classification Model
+#### 2. Quick Analysis with DeepSight Advisor
+```python
+from deepsight.core.advisor import run_analysis
+
+# Run complete ML analysis pipeline
+result = run_analysis(
+    run_id="your_mlflow_run_id",
+    tracking_uri="http://localhost:5000"
+)
+
+print(f"Analysis completed: {result.success}")
+print(f"Execution time: {result.execution_time:.2f}s")
+```
+
+#### 3. Train a Classification Model
 ```python
 from deepsight.zoo.foodwaste import load_train_and_val_datasets
 from deepsight.zoo.trainers.classification import ClassificationTrainer, ClassificationTrainerConfig
@@ -107,19 +130,42 @@ results = runner.run_suites(train_data=train_data, test_data=test_data)
 ```
 deepsight/
 ├── 📁 core/                    # Core analysis engine
-│   ├── data/                   # Data loading and processing
-│   ├── db/                     # Database integrations
-│   ├── ingestors/              # Data ingestion utilities
-│   ├── llms/                   # Language model integrations
-│   ├── retrievers/             # Information retrieval
-│   └── researcher.py           # Research assistant
+│   ├── advisor/               # DeepSight Advisor orchestrator
+│   │   ├── config.py          # Configuration management
+│   │   ├── errors.py          # Error hierarchy
+│   │   ├── orchestrator.py    # Main DeepSightAdvisor class
+│   │   └── result.py          # Result data models
+│   ├── artifacts/             # Artifact management system
+│   │   ├── datamodel.py       # Artifact data models
+│   │   ├── manager.py         # Artifact manager
+│   │   ├── repository.py      # Artifact repository
+│   │   └── services.py        # Artifact services
+│   ├── data/                  # Data loading and processing
+│   ├── query/                 # Query generation and intelligence
+│   │   ├── builders/          # Prompt builders
+│   │   │   ├── base.py        # Base builder classes
+│   │   │   ├── config.py      # Builder configuration
+│   │   │   ├── deepchecks.py  # Deepchecks prompt builder
+│   │   │   ├── generator.py   # Query generator
+│   │   │   └── training.py    # Training prompt builder
+│   │   └── intelligence/      # AI intelligence integration
+│   │       ├── client.py      # Intelligence client
+│   │       ├── models.py      # Intelligence models
+│   │       └── providers/     # AI provider implementations
+│   │           ├── base.py    # Base provider interface
+│   │           ├── coding_agent/ # Coding agent providers
+│   │           └── llm/       # LLM providers
 ├── 📁 integrations/            # External tool integrations
+│   ├── cursor/                # Cursor AI integration
 │   ├── deepchecks.py          # Deepchecks validation runner
-│   ├── dvc.py                 # DVC data management
+│   ├── lightning.py           # PyTorch Lightning integration
 │   └── mlflow.py              # MLflow experiment tracking
 ├── 📁 zoo/                     # Model zoo and trainers
+│   ├── datasets/              # Dataset implementations
+│   │   ├── food.py            # Food dataset
+│   │   └── foodwaste.py       # Food waste dataset
 │   ├── trainers/              # Training frameworks
-│   ├── foodwaste.py           # Sample dataset implementation
+│   │   └── classification.py  # Classification trainer
 │   └── timm_models.py         # TIMM model integrations
 ├── 📁 utils/                   # Shared utilities
 │   ├── config.py              # Configuration management
@@ -128,33 +174,6 @@ deepsight/
 └── 📁 cli/                     # Command-line interface
     ├── main.py                # CLI entry point
     └── commands.py            # Command implementations
-```
-
-## 🔧 Configuration
-
-DeepSight uses YAML configuration files for easy customization:
-
-```yaml
-# deepsight_config.yaml
-mlflow:
-  tracking_uri: "http://localhost:5000"
-  experiment_name: "cv_model_analysis"
-
-deepchecks:
-  suite: "computer_vision"
-  custom_checks:
-    - "overfitting_analysis"
-    - "data_drift_detection"
-
-detection:
-  thresholds:
-    train_val_gap: 0.1
-    learning_curve_slope: 0.05
-  metrics: ["accuracy", "loss", "f1_score"]
-
-output:
-  format: ["html", "pdf"]
-  include_visualizations: true
 ```
 
 ## 📦 Dependencies
@@ -181,36 +200,26 @@ output:
 
 Explore the `examples/` directory for comprehensive tutorials:
 
+### 🤖 **DeepSight Advisor Examples**
+- **`advisor_usage.py`**: Complete advisor workflow with multiple configuration methods
+  ```bash
+  # Quick analysis
+  uv run examples/advisor_usage.py example_1
+  
+  # Full configuration
+  uv run examples/advisor_usage.py example_2
+  
+  # Dictionary configuration
+  uv run examples/advisor_usage.py example_3
+  ```
+
+### 🔧 **Core Component Examples**
 - **`run_training.py`**: Complete training pipeline example
 - **`run_suite_of_checks.py`**: Model validation workflow
+- **`run_artifact_manager.py`**: Artifact management and retrieval
+- **`build_prompts.py`**: Query generation from artifacts
 - **`vision_dataloader.ipynb`**: Interactive data exploration notebook
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### Development Setup
-
-```bash
-# Clone and setup development environment
-git clone https://github.com/your-org/deepsight.git
-cd deepsight
-uv sync --dev
-
-# Run tests
-pytest src/tests/
-
-# Format code
-black src/
-isort src/
-```
-
-## 📖 Documentation
-
-- **[API Reference](docs/api/)**: Detailed API documentation
-- **[User Guide](docs/guide/)**: Step-by-step tutorials
-- **[Best Practices](docs/best-practices/)**: MLOps recommendations
-- **[Examples](examples/)**: Practical usage examples
 
 ## 🔬 Research & Citations
 
