@@ -85,7 +85,9 @@ class ArtifactsManager:
 
         return final_path
 
-    def get_local_path(self, run_id: str, artifact_key: str, download_if_missing: bool = True) -> Optional[Path]:
+    def get_local_path(self, run_id: str, artifact_key: Union[str, ArtifactPaths], download_if_missing: bool = True) -> Optional[Path]:
+        artifact_key = ArtifactPaths(artifact_key) if isinstance(artifact_key, str) else artifact_key
+        artifact_key = artifact_key.value
         rec = self.repo.get(run_id, artifact_key)
         if rec and rec.local_path and Path(rec.local_path).exists():
             self.repo.touch_access(run_id, artifact_key)

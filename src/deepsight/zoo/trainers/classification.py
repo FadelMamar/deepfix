@@ -246,7 +246,7 @@ class ClassificationTrainer(object):
     def run(self, model:torch.nn.Module,
             train_dataset: Dataset,
             val_dataset: Dataset,
-            deepsight_callback: DeepSightCallback,
+            deepsight_callback: Optional[DeepSightCallback] = None,
             debug: bool = False) -> None:
         """
         Run image classification training or evaluation based on config.
