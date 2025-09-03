@@ -5,6 +5,10 @@
 [![MLflow](https://img.shields.io/badge/MLflow-3.0+-orange.svg)](https://mlflow.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.8.0-red.svg)](https://pytorch.org/)
 
+<div align="center">
+  <img src="assets/hero.png" alt="PoC"/>
+</div>
+
 **DeepSight** is an intelligent MLOps copilot designed to provide systematic guidance for computer vision model training, debugging, and overfitting analysis. It integrates seamlessly with popular MLOps tools to deliver actionable insights through automated testing, research assistance, and comprehensive reporting.
 
 ## 🎯 Key Features
@@ -48,7 +52,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/deepsight.git
+git clone https://github.com/FadelMamar/deepsight.git
 cd deepsight
 
 # Install with uv (recommended)
