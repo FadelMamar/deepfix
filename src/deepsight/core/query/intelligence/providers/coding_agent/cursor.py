@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional, List, Union
 import time
+import traceback
 
 from ...models import (IntelligenceResponse, ProviderType, 
                         IntelligenceProviderError, Providers, Capabilities)
@@ -27,8 +28,8 @@ class CursorAgentProvider(BaseProvider):
                 provider_type=ProviderType.CODING_AGENT,
                 latency_ms=latency_ms,
             )
-        except Exception as e:
-            raise IntelligenceProviderError(f"Cursor agent failed: {e}")
+        except Exception:
+            raise IntelligenceProviderError(f"Cursor agent failed: {traceback.format_exc()}")
 
     def _enhance_prompt_for_coding(self, prompt: str, context: Dict[str, Any]) -> str:
         parts = [

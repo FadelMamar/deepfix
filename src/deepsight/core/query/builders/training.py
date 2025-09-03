@@ -8,11 +8,10 @@ from TrainingArtifacts instances.
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 import pandas as pd
-
+import json
 import seaborn as sns
 import matplotlib.pyplot as plt
 import math
-from omegaconf import OmegaConf
 
 from .base import BasePromptBuilder
 from ...artifacts.datamodel import TrainingArtifacts
@@ -93,7 +92,7 @@ class TrainingPromptBuilder(BasePromptBuilder):
             flat_metrics = {}
             for name,df in artifact.metrics_values.groupby('key'):
                 flat_metrics[name] = df.sort_values(by=['step'])['value'].to_list()
-            prompt_parts.append(f"- Parse the training curves from the metrics values:\n {OmegaConf.to_yaml(flat_metrics)}")
+            prompt_parts.append(f"- Parse the training curves from the metrics values:\n {flat_metrics}")
             
         # Add training parameters if available
         if artifact.params:

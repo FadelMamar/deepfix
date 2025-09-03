@@ -27,14 +27,6 @@ class CursorConfig(BaseModel):
         # Add output format if specified
         if self.output_format:
             args.extend(["--output-format", self.output_format])
-        
-        # Add additional arguments (but exclude 'additional_args' itself)
-        if self.additional_args:
-            for key, value in self.additional_args.items():
-                if isinstance(value, bool):
-                    if value:
-                        args.append(f"--{key}")
-                else:
-                    args.extend([f"--{key}", str(value)])
+
         
         return args

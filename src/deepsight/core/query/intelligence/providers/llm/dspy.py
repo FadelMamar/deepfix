@@ -5,7 +5,7 @@ from ...models import IntelligenceResponse, ProviderType, IntelligenceProviderEr
 from ..base import BaseProvider
 
 
-class DspyRouter(BaseProvider):
+class DspyRouter:
     """Minimal DSPy router stub to unify multiple LLM backends.
 
     Replace with actual DSPy integration.
@@ -26,7 +26,7 @@ class DspyRouter(BaseProvider):
         return _Result(content=f"[DSPy:{self.backend}:{self.model}]\n{prompt}")
 
 
-class DspyLLMProvider:
+class DspyLLMProvider(BaseProvider):
     """DSPy-backed LLM provider wrapping multiple backends."""
 
     def __init__(self, config: Dict[str, Any]):
