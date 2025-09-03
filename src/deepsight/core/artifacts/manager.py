@@ -20,7 +20,6 @@ class ArtifactsManager:
     def __init__(
         self,
         sqlite_path: str,
-        artifacts_root: str,
         mlflow_manager: MLflowManager,
     ) -> None:
         self.repo = ArtifactRepository(sqlite_path)
