@@ -46,9 +46,7 @@ class DeepchecksConfig(BaseModel):
 
     @classmethod
     def from_file(cls, file_path: str) -> "DeepchecksConfig":
-        with open(file_path, "r") as f:
-            config = yaml.safe_load(f)
-        return cls.from_dict(config)
+        return cls.from_dict(OmegaConf.load(file_path))
 
 
 class DVCConfig(BaseModel):

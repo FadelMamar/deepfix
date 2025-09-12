@@ -9,14 +9,14 @@
   <img src="assets/hero.png" alt="PoC"/>
 </div>
 
-**DeepSight** is an intelligent MLOps copilot designed to provide systematic guidance for computer vision model training, debugging, and overfitting analysis. It integrates seamlessly with popular MLOps tools to deliver actionable insights through automated testing, research assistance, and comprehensive reporting.
+**DeepSight** is an copilot designed to provide systematic guidance for computer vision model training, debugging, and overfitting analysis. It integrates seamlessly with popular MLOps tools to deliver actionable insights through automated testing, research assistance, and comprehensive reporting.
 
 ## 🎯 Key Features
 
 ### 🤖 **DeepSight Advisor - Unified Orchestrator**
 - **End-to-End Analysis**: Complete ML analysis pipeline from artifact loading to AI-powered insights
 - **Multiple Configuration Methods**: Simple convenience functions, config objects, or dictionary-based setup
-- **Automated Workflow**: Intelligent orchestration of artifact loading, query generation, and AI analysis
+- **Automated Workflow**: Intelligent orchestration of artifact loading, analysis
 - **Comprehensive Logging**: Detailed progress tracking and execution monitoring
 - **Flexible Output**: Configurable result saving in multiple formats (JSON, YAML, text)
 
@@ -24,14 +24,13 @@
 - **Overfitting Detection**: Automated detection and analysis of overfitting patterns in CV models
 - **Performance Monitoring**: Real-time tracking of training metrics with intelligent alerts
 - **Learning Curve Analysis**: Advanced analysis of model behavior during training
-- **AI-Powered Insights**: Intelligent query generation and analysis from ML artifacts
 
 ### 🛠️ **MLOps Tool Integration**
 - **MLflow Integration**: Seamless experiment tracking, model registry, and artifact management
 - **Deepchecks Validation**: Automated model validation with computer vision-specific checks
 - **DVC Support**: Data versioning and pipeline management integration
 - **PyTorch Lightning**: Advanced training framework with built-in best practices
-- **Cursor AI Integration**: Direct integration with Cursor AI for enhanced analysis
+- **Cursor**: Direct integration with Cursor coding agent for guided code generation
 
 ### 📊 **Advanced Training Capabilities**
 - **Classification Trainer**: Production-ready trainer with configurable hyperparameters

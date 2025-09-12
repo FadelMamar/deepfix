@@ -23,18 +23,18 @@ LOGGER = get_logger(__name__)
 class DeepSightCallback(Callback):
     def __init__(
         self,
-        config: dict,
         dataset_name: str,
         deepchecks_config: DeepchecksConfig,
         train_dataset: Dataset,
         val_dataset: Optional[Dataset] = None,
+        config: Optional[dict] = None,
     ):
         super().__init__()
         self.mlflow_run_id = None
         self.mlflow_experiment_id = None
         self.best_model_path: str = None
         self.best_model_score: float = None
-        self.config: dict = config
+        self.config: dict = config or {}
         self.dataset_name: str = dataset_name
         self.deepchecks_config: DeepchecksConfig = deepchecks_config
 
