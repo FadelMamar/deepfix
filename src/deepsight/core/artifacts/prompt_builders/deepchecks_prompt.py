@@ -7,7 +7,7 @@ from DeepchecksArtifacts instances.
 
 from typing import Optional, Dict, Any, Union
 from .base import BasePromptBuilder
-from ...artifacts.datamodel import (
+from ..datamodel import (
     DeepchecksArtifacts,
     DeepchecksParsedResult,
 )

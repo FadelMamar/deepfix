@@ -6,7 +6,7 @@ This module provides the abstract base class for all prompt builders.
 
 from abc import ABC, abstractmethod
 from typing import Union, Optional, Dict, Any, List
-from ...artifacts.datamodel import DeepchecksArtifacts, TrainingArtifacts
+from ..datamodel import DeepchecksArtifacts, TrainingArtifacts
 
 
 class BasePromptBuilder(ABC):

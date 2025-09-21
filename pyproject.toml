@@ -8,6 +8,7 @@ dependencies = [
     "anywidget>=0.9.18",
     "datasets>=4.0.0",
     "deepchecks[vision]>=0.19.1",
+    "dspy>=3.0.3",
     "dvc>=3.62.0",
     "fiftyone==1.7.0",
     "fire>=0.7.1",

@@ -8,10 +8,9 @@ import tempfile
 import os
 
 from ..utils.logging import get_logger
-from .deepchecks import DeepchecksConfig, DeepchecksArtifacts
+from ..core.config import DeepchecksConfig
 from .mlflow import MLflowManager
-from ..core.data import ClassificationVisionDataLoader
-from ..core.artifacts.datamodel import ArtifactPaths
+from ..core.artifacts.datamodel import ArtifactPaths,DeepchecksArtifacts
 from ..core.pipelines.data_ingestion import DataIngestor
 from ..core.pipelines.checks import Checks
 from ..core.pipelines.base import Pipeline

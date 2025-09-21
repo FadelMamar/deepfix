@@ -20,7 +20,7 @@ from omegaconf import DictConfig
 import pandas as pd
 import yaml
 
-from ...integrations.deepchecks import DeepchecksConfig
+from ..config import DeepchecksConfig
 
 
 class ArtifactPaths(Enum):

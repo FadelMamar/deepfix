@@ -8,8 +8,7 @@ including YAML loading, validation, and default value management.
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 from pydantic import BaseModel, Field, field_validator
-
-from .artifacts.datamodel import ArtifactPaths
+from omegaconf import DictConfig, OmegaConf
 
 
 class MLflowConfig(BaseModel):
@@ -62,12 +61,6 @@ class ArtifactConfig(BaseModel):
         description="Path to SQLite database for artifact caching",
     )
 
-    @field_validator("artifact_keys")
-    def validate_artifact_keys(cls, v):
-        if not v:
-            raise ValueError("artifact_keys cannot be empty")
-        return v
-
 
 class QueryConfig(BaseModel):
     """Configuration for query generation."""
@@ -104,3 +97,38 @@ class OutputConfig(BaseModel):
         if v.lower() not in allowed_formats:
             raise ValueError(f"format must be one of {allowed_formats}")
         return v.lower()
+
+
+class DeepchecksConfig(BaseModel):
+    train_test_validation: bool = Field(
+        default=True, description="Whether to run the train_test_validation suite"
+    )
+    data_integrity: bool = Field(
+        default=True, description="Whether to run the data_integrity suite"
+    )
+    model_evaluation: bool = Field(
+        default=False, description="Whether to run the model_evaluation suite"
+    )
+    max_samples: Optional[int] = Field(
+        default=None, description="Maximum number of samples to run the suites on"
+    )
+    random_state: int = Field(
+        default=42, description="Random seed to use for the suites"
+    )
+    save_results: bool = Field(default=False, description="Whether to save the results")
+    output_dir: Optional[str] = Field(
+        default=None, description="Output directory to save the results"
+    )
+    save_display: bool = Field(default=False, description="Whether to save the display")
+    parse_results: bool = Field(
+        default=False, description="Whether to parse the results"
+    )
+    batch_size: int = Field(default=16, description="Batch size to use for the suites")
+
+    @classmethod
+    def from_dict(cls, config: Union[Dict[str, Any], DictConfig]) -> "DeepchecksConfig":
+        return cls(**config)
+
+    @classmethod
+    def from_file(cls, file_path: str) -> "DeepchecksConfig":
+        return cls.from_dict(OmegaConf.load(file_path))

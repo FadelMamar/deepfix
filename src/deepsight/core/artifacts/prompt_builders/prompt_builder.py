@@ -6,9 +6,9 @@ from typing import Optional, Dict, Any, List, Union
 import traceback
 
 from ....utils.logging import get_logger
-from ...artifacts.datamodel import DeepchecksArtifacts, TrainingArtifacts
-from . import DeepchecksPromptBuilder, TrainingPromptBuilder
 from ....utils.exceptions import PromptBuilderError
+from ..datamodel import DeepchecksArtifacts, TrainingArtifacts
+from . import DeepchecksPromptBuilder, TrainingPromptBuilder
 
 
 class PromptBuilder:
