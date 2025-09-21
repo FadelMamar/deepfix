@@ -8,11 +8,9 @@ This module contains shared utility functions and classes including:
 - Common helper functions
 """
 
-from .config import DeepchecksConfig
 from .logging import setup_logging, get_logger
 
 __all__ = [
-    "DeepchecksConfig",
     "setup_logging",
     "get_logger",
 ]

@@ -10,6 +10,7 @@ This module provides comprehensive MLflow integration including:
 
 from typing import Dict, List, Optional, Any, Union
 import mlflow
+import traceback
 from mlflow.tracking import MlflowClient
 from mlflow.entities import Run, Experiment
 from omegaconf import OmegaConf
@@ -23,7 +24,7 @@ from ..core.artifacts.datamodel import (
     ArtifactPaths,
     TrainingArtifacts,
 )
-from ..utils.config import DeepchecksConfig
+from .deepchecks import DeepchecksConfig
 
 from ..utils.logging import get_logger
 
@@ -139,6 +140,7 @@ class MLflowManager:
         return self.current_run.data.tags
 
     def get_model_checkpoint(self) -> str:
+        assert self.run_id is not None
         LOGGER.info(f"Downloading model checkpoint for run {self.run_id}")
         best_checkpoint = self.client.download_artifacts(
             self.run_id, ArtifactPaths.MODEL_CHECKPOINT.value, dst_path=self.dwnd_dir
@@ -209,3 +211,17 @@ class MLflowManager:
         self.client.log_artifact(
             run_id=self.run_id, artifact_path=artifact_key, local_path=local_path
         )
+        
+    def log_artifact(self,artifact_key: str, local_path: str,run_id:Optional[str]=None,run_name:Optional[str]=None):
+        if run_id is not None:
+            return self.add_artifact()
+
+        with mlflow.start_run(run_id=run_id,run_name=run_name):
+            try:
+                mlflow.log_artifact(
+                    str(local_path), artifact_key
+                )
+            except Exception:
+                LOGGER.error(
+                    f"Error logging model checkpoint: {traceback.format_exc()}"
+                )

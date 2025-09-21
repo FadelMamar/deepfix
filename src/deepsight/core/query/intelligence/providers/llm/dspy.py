@@ -23,8 +23,6 @@ class BugResolutionRecommendation(dspy.Signature):
 
 class DspyRouter:
     """Minimal DSPy router stub to unify multiple LLM backends.
-
-    Replace with actual DSPy integration.
     """
 
     def __init__(self, config: LLMConfig):
