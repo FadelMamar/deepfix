@@ -13,7 +13,6 @@ import yaml
 from pydantic import BaseModel, Field
 
 from ...core.query.intelligence.models import IntelligenceResponse
-from ...core.artifacts.datamodel import ArtifactPaths
 
 
 class AdvisorResult(BaseModel):
@@ -24,15 +23,6 @@ class AdvisorResult(BaseModel):
     timestamp: datetime = Field(
         default_factory=datetime.now,
         description="Timestamp when the analysis was completed",
-    )
-
-    # Artifact information
-    artifacts_loaded: List[str] = Field(
-        default_factory=list,
-        description="List of artifact keys that were successfully loaded",
-    )
-    artifacts_failed: List[str] = Field(
-        default_factory=list, description="List of artifact keys that failed to load"
     )
 
     # Query information
@@ -58,9 +48,6 @@ class AdvisorResult(BaseModel):
     execution_time: float = Field(
         default=0.0, description="Total execution time in seconds"
     )
-    artifact_loading_time: float = Field(
-        default=0.0, description="Time spent loading artifacts in seconds"
-    )
     query_generation_time: float = Field(
         default=0.0, description="Time spent generating query in seconds"
     )
@@ -68,46 +55,6 @@ class AdvisorResult(BaseModel):
         default=0.0, description="Time spent executing intelligence query in seconds"
     )
 
-    # Output information
-    output_paths: Dict[str, Path] = Field(
-        default_factory=dict, description="Paths to saved output files"
-    )
-
-    # Metadata
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata about the analysis"
-    )
-
-    # Status information
-    success: bool = Field(
-        default=True, description="Whether the analysis completed successfully"
-    )
-    error_message: Optional[str] = Field(
-        default=None, description="Error message if the analysis failed"
-    )
-
-    def add_artifact_loaded(self, artifact_key: Union[str, ArtifactPaths]) -> None:
-        """Add an artifact key to the loaded list."""
-        key_str = (
-            artifact_key.value if hasattr(artifact_key, "value") else str(artifact_key)
-        )
-        if key_str not in self.artifacts_loaded:
-            self.artifacts_loaded.append(key_str)
-
-    def add_artifact_failed(
-        self, artifact_key: Union[str, ArtifactPaths], error: str
-    ) -> None:
-        """Add an artifact key to the failed list with error message."""
-        key_str = (
-            artifact_key.value if hasattr(artifact_key, "value") else str(artifact_key)
-        )
-        if key_str not in self.artifacts_failed:
-            self.artifacts_failed.append(key_str)
-
-        # Store error details in metadata
-        if "artifact_errors" not in self.metadata:
-            self.metadata["artifact_errors"] = {}
-        self.metadata["artifact_errors"][key_str] = error
 
     def set_prompt(self, prompt: str) -> None:
         """Set the generated prompt and calculate its length."""
@@ -122,19 +69,6 @@ class AdvisorResult(BaseModel):
             len(self.response_content) if self.response_content else 0
         )
 
-    def add_output_path(self, key: str, path: Union[str, Path]) -> None:
-        """Add an output file path."""
-        self.output_paths[key] = Path(path)
-
-    def add_metadata(self, key: str, value: Any) -> None:
-        """Add metadata key-value pair."""
-        self.metadata[key] = value
-
-    def set_error(self, error_message: str) -> None:
-        """Set error information."""
-        self.success = False
-        self.error_message = error_message
-
     def get_summary(self) -> Dict[str, Any]:
         """Get a summary of the analysis results."""
         return {
@@ -146,7 +80,6 @@ class AdvisorResult(BaseModel):
             "prompt_generated": self.prompt_generated is not None,
             "response_received": self.response is not None,
             "execution_time": self.execution_time,
-            "error_message": self.error_message,
         }
 
     def to_dict(self, include_content: bool = True) -> Dict[str, Any]:
@@ -184,7 +117,6 @@ class AdvisorResult(BaseModel):
             file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(file_path, "w") as f:
                 f.write(json_str)
-            self.add_output_path("result_json", file_path)
 
         return json_str
 
@@ -200,7 +132,6 @@ class AdvisorResult(BaseModel):
             file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(file_path, "w") as f:
                 f.write(yaml_str)
-            self.add_output_path("result_yaml", file_path)
 
         return yaml_str
 
@@ -247,13 +178,6 @@ class AdvisorResult(BaseModel):
             lines.append(self.response_content)
             lines.append("")
 
-        # Error section
-        if not self.success and self.error_message:
-            lines.append("ERROR:")
-            lines.append("-" * 20)
-            lines.append(self.error_message)
-            lines.append("")
-
         # Output files section
         if self.output_paths:
             lines.append("OUTPUT FILES:")
@@ -269,7 +193,6 @@ class AdvisorResult(BaseModel):
             file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(file_path, "w") as f:
                 f.write(text_content)
-            self.add_output_path("result_text", file_path)
 
         return text_content
 

@@ -1,5 +1,5 @@
 """
-Training prompt builder for QueryGenerator.
+Training prompt builder for PromptBuilder.
 
 This module provides the TrainingPromptBuilder for creating prompts
 from TrainingArtifacts instances.
@@ -8,7 +8,6 @@ from TrainingArtifacts instances.
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 import pandas as pd
-import json
 import seaborn as sns
 import matplotlib.pyplot as plt
 import math
@@ -77,7 +76,7 @@ class TrainingPromptBuilder(BasePromptBuilder):
 
     def can_build(self, artifact_type: str) -> bool:
         """Check if this builder can handle TrainingArtifacts."""
-        return artifact_type == "TrainingArtifacts"
+        return artifact_type == TrainingArtifacts.__name__
 
     def build_prompt(
         self,

@@ -112,7 +112,7 @@ python examples/build_prompts.py
 - Optional: AI provider credentials for query execution
 
 **Key Components**:
-- `QueryGenerator`: Prompt generation from artifacts
+- `PromptBuilder`: Prompt generation from artifacts
 - `IntelligenceClient`: AI provider integration
 - `ArtifactsManager`: Artifact loading and management
 

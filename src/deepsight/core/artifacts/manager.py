@@ -15,11 +15,11 @@ from .datamodel import (
     ArtifactRecord,
     ArtifactStatus,
     ArtifactPaths,
-    DeepchecksArtifact,
+    DeepchecksArtifacts,
     TrainingArtifacts,
 )
 from ...integrations.mlflow import MLflowManager
-from ...utils.config import DeepchecksConfig
+from ...integrations import DeepchecksConfig
 
 
 class ArtifactsManager:
@@ -122,7 +122,7 @@ class ArtifactsManager:
         run_id: str,
         artifact_key: Union[str, ArtifactPaths],
         download_if_missing: bool = True,
-    ) -> Union[DeepchecksArtifact, TrainingArtifacts, str]:
+    ) -> Union[DeepchecksArtifacts, TrainingArtifacts, str]:
         artifact_key = (
             ArtifactPaths(artifact_key)
             if isinstance(artifact_key, str)
@@ -130,15 +130,15 @@ class ArtifactsManager:
         )
         path = self.get_local_path(run_id, artifact_key.value, download_if_missing)
         if artifact_key == ArtifactPaths.DEEPCHECKS:
-            return self.load_deepchecks_artifacts(path)
+            return self._load_deepchecks_artifacts(path)
         elif artifact_key == ArtifactPaths.TRAINING:
-            return self.load_training_artifacts(path)
+            return self._load_training_artifacts(path)
         elif artifact_key == ArtifactPaths.MODEL_CHECKPOINT:
-            return self.load_model_checkpoint(path)
+            return self._load_model_checkpoint(path)
         else:
             raise ValueError(f"Artifact key {artifact_key} not supported")
 
-    def load_training_artifacts(self, local_path: str) -> TrainingArtifacts:
+    def _load_training_artifacts(self, local_path: str) -> TrainingArtifacts:
         metrics = os.path.join(local_path, ArtifactPaths.TRAINING_METRICS.value)
         params = os.path.join(local_path, ArtifactPaths.TRAINING_PARAMS.value)
         if not os.path.exists(params):
@@ -151,16 +151,16 @@ class ArtifactsManager:
             params=params,
         )
 
-    def load_deepchecks_artifacts(self, local_path: str) -> DeepchecksArtifact:
+    def _load_deepchecks_artifacts(self, local_path: str) -> DeepchecksArtifacts:
         artifacts = os.path.join(local_path, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
-        artifacts = DeepchecksArtifact.from_file(artifacts)
+        artifacts = DeepchecksArtifacts.from_file(artifacts)
         if artifacts.config is None:
             config = os.path.join(local_path, ArtifactPaths.DEEPCHECKS_CONFIG.value)
             config = DeepchecksConfig.from_file(config)
             artifacts.config = config
         return artifacts
 
-    def load_model_checkpoint(self, local_path: str) -> str:
+    def _load_model_checkpoint(self, local_path: str) -> str:
         best_checkpoint = os.path.join(local_path, ArtifactPaths.MODEL_CHECKPOINT.value)
         artifacts = list(Path(best_checkpoint).iterdir())
         assert len(artifacts) == 1, (

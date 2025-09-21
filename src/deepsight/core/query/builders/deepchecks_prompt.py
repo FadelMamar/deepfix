@@ -1,21 +1,18 @@
 """
-Deepchecks prompt builder for QueryGenerator.
+Deepchecks prompt builder for PromptBuilder.
 
 This module provides the DeepchecksPromptBuilder for creating prompts
-from DeepchecksArtifact instances.
+from DeepchecksArtifacts instances.
 """
 
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, Union
 from .base import BasePromptBuilder
 from ...artifacts.datamodel import (
-    DeepchecksArtifact,
+    DeepchecksArtifacts,
     DeepchecksParsedResult,
-    DeepchecksResultHeaders,
 )
-from .config import QueryType
 from pydantic import BaseModel
 import re
-import json
 from omegaconf import OmegaConf
 
 
@@ -106,19 +103,19 @@ class DeepchecksPromptBuilder(BasePromptBuilder):
     """Builds prompts for Deepchecks artifact analysis."""
 
     def can_build(self, artifact_type: str) -> bool:
-        """Check if this builder can handle DeepchecksArtifact."""
-        return artifact_type == "DeepchecksArtifact"
+        """Check if this builder can handle DeepchecksArtifacts."""
+        return artifact_type == DeepchecksArtifacts.__name__
 
     def build_prompt(
         self,
-        artifact: DeepchecksArtifact,
+        artifact: DeepchecksArtifacts,
         context: Optional[Dict[str, Any]] = None,
         exclude_fields_from_result: list[str] = ["value", "params", "link_in_summary"],
         exclude_empty_conditions_results: bool = True,
     ) -> str:
         extractor = Extractor()
 
-        """Build structured prompt from DeepchecksArtifact."""
+        """Build structured prompt from DeepchecksArtifacts."""
         prompt_parts = [
             f"Dataset: {artifact.dataset_name}",
             f"Validation checks performed: {sum(len(results) for results in artifact.results.values())}",
@@ -165,4 +162,4 @@ class DeepchecksPromptBuilder(BasePromptBuilder):
 
         # Combine and truncate if necessary
         full_prompt = "\n".join(prompt_parts)
-        return full_prompt  # self._truncate_prompt(full_prompt)
+        return full_prompt 

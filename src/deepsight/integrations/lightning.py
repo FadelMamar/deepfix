@@ -8,7 +8,7 @@ import tempfile
 import os
 
 from ..utils.logging import get_logger
-from .deepchecks import DeepchecksConfig
+from .deepchecks import DeepchecksConfig, DeepchecksArtifacts
 from .mlflow import MLflowManager
 from ..core.data import ClassificationVisionDataLoader
 from ..core.artifacts.datamodel import ArtifactPaths
@@ -95,6 +95,11 @@ class DeepSightCallback(Callback):
         if artifacts is None:
             LOGGER.warning("No deepchecks artifacts found")
             return None
+        self._log_deepchecks(artifacts)
+            
+        return None
+    
+    def _log_deepchecks(self, artifacts:DeepchecksArtifacts) -> None:
         if self.mlflow_manager is not None:
             with tempfile.TemporaryDirectory() as tmp_dir:
                 artifacts.config = self.deepchecks_config
@@ -111,8 +116,6 @@ class DeepSightCallback(Callback):
                     LOGGER.error(f"Error logging deepchecks: {traceback.format_exc()}")
         else:
             LOGGER.warning("No mlflow manager found")
-            
-        return None
 
     def _log_model(self, trainer: L.Trainer) -> None:
         self.best_model_path = trainer.checkpoint_callback.best_model_path
@@ -133,4 +136,4 @@ class DeepSightCallback(Callback):
 
     # TODO: make sure that on_fit_end pl_module is the best model, automatically loaded by trainer
     def on_fit_end(self, trainer: L.Trainer, pl_module: L.LightningModule):
-        self.run(trainer,pl_module)
+        self.run(trainer=trainer,pl_module=pl_module)

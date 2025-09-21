@@ -20,7 +20,7 @@ import os
 from tempfile import TemporaryDirectory
 
 from ..core.artifacts.datamodel import (
-    DeepchecksArtifact,
+    DeepchecksArtifacts,
     ArtifactPaths,
     TrainingArtifacts,
 )
@@ -157,13 +157,13 @@ class MLflowManager:
             raise ValueError("Run not set")
         return self.current_run.data.params
 
-    def get_deepchecks_artifacts(self) -> DeepchecksArtifact:
+    def get_deepchecks_artifacts(self) -> DeepchecksArtifacts:
         LOGGER.info(f"Downloading deepchecks artifacts for run {self.run_id}")
         deepchecks = self.client.download_artifacts(
             self.run_id, ArtifactPaths.DEEPCHECKS.value, dst_path=self.dwnd_dir
         )
         artifacts = os.path.join(deepchecks, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
-        artifacts = DeepchecksArtifact.from_file(artifacts)
+        artifacts = DeepchecksArtifacts.from_file(artifacts)
 
         if artifacts.config is None:
             config = os.path.join(deepchecks, ArtifactPaths.DEEPCHECKS_CONFIG.value)

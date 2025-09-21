@@ -1,57 +1,41 @@
 """
-Main QueryGenerator class for orchestrating prompt generation from existing Pydantic models.
+Main PromptBuilder class for orchestrating prompt creation from existing Pydantic models.
 """
 
 from typing import Optional, Dict, Any, List, Union
-from pathlib import Path
 import traceback
 
 from ....utils.logging import get_logger
-from ....core.artifacts.datamodel import DeepchecksArtifact, TrainingArtifacts
+from ...artifacts.datamodel import DeepchecksArtifacts, TrainingArtifacts
 from . import DeepchecksPromptBuilder, TrainingPromptBuilder
-from .config import QueryGeneratorConfig
 from ....utils.exceptions import PromptBuilderError
 
 
-class QueryGenerator:
-    """Main class for orchestrating prompt generation from existing Pydantic models."""
+class PromptBuilder:
+    """Main class for orchestrating prompt creation from existing Pydantic models."""
 
     def __init__(
         self,
-        config: Optional[Union[Dict[str, Any], QueryGeneratorConfig]] = None,
-        config_path: Optional[Union[str, Path]] = None,
     ):
-        """Initialize the QueryGenerator.
+        """Initialize the PromptBuilder.
 
         Args:
-            config: Optional configuration for the QueryGenerator
+            config: Optional configuration for the PromptBuilder
             config_path: Optional path to configuration file
         """
         self.logger = get_logger(__name__)
-        self.config = self._load_config(config, config_path)
         self.prompt_builders = self._initialize_prompt_builders()
 
-        self.logger.info("QueryGenerator initialized successfully")
-
-    def _load_config(
-        self,
-        config: Optional[Dict[str, Any]] = None,
-        config_path: Optional[Union[str, Path]] = None,
-    ) -> QueryGeneratorConfig:
-        """Load and validate configuration."""
-        if config:
-            return QueryGeneratorConfig.from_dict(config)
-        if config_path:
-            return QueryGeneratorConfig.from_file(config_path)
-        return QueryGeneratorConfig()
+        self.logger.info("PromptBuilder initialized successfully")
 
     def build_prompt(
         self,
-        artifacts: List[Union[DeepchecksArtifact, TrainingArtifacts]],
+        artifacts: List[Union[DeepchecksArtifacts, TrainingArtifacts]],
         context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Build structured prompt based on artifact types."""
         try:
+            assert len(artifacts) > 0, "No artifacts provided for prompt generation"
             prompt_parts = []
 
             # Group artifacts by type
@@ -121,15 +105,5 @@ class QueryGenerator:
         self,
     ) -> List[Union[DeepchecksPromptBuilder, TrainingPromptBuilder]]:
         """Initialize prompt builders based on configuration."""
-        builders = []
-
-        # Always include core builders
-        builders.extend([DeepchecksPromptBuilder(), TrainingPromptBuilder()])
-
-        # Add custom builders from config if specified
-        if "custom_builders" in self.config.prompt_builders:
-            for builder_config in self.config.prompt_builders["custom_builders"]:
-                # Implementation for custom builders would go here
-                self.logger.debug(f"Custom builder config found: {builder_config}")
-
+        builders = [DeepchecksPromptBuilder(), TrainingPromptBuilder()]
         return builders

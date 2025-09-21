@@ -14,15 +14,17 @@ import yaml
 
 from ...integrations.mlflow import MLflowManager
 from ..artifacts import (
-    DeepchecksArtifact,
+    DeepchecksArtifacts,
     TrainingArtifacts,
     ArtifactsManager
 )
 
-from ..query import QueryGenerator,IntelligenceClient,IntelligenceConfig
+from ..query import PromptBuilder,IntelligenceClient,IntelligenceConfig
 from ...utils.logging import get_logger
 
 from ..config import QueryConfig, OutputConfig,MLflowConfig,ArtifactConfig
+from ..pipelines.base import Pipeline
+from ..pipelines.artifacts import LoadTrainingArtifact,LoadDeepchecksArtifacts
 from .result import AdvisorResult
 from .errors import (
     ConfigurationError,
@@ -184,15 +186,18 @@ class DeepSightAdvisor:
                 f"MLflow manager initialized: {self.config.mlflow.tracking_uri}"
             )
 
-            # Initialize artifact manager
-            self.artifact_manager = ArtifactsManager(
-                sqlite_path=self.config.artifacts.sqlite_path,
-                mlflow_manager=self.mlflow_manager,
-            )
+            # Initialize artifacts loaders
+            cfg = dict(mlflow_manager=self.mlflow_manager,artifact_sqlite_path=self.config.artifacts.sqlite_path)
+            steps = []
+            if self.config.artifacts.load_training:
+                steps.append(LoadTrainingArtifact(**cfg))
+            if self.config.artifacts.load_checks:
+                steps.append(LoadDeepchecksArtifacts(**cfg))
+            self.artifacts_pipeline = Pipeline(steps=steps)
             self.logger.info("Artifact manager initialized")
 
             # Initialize query generator
-            self.query_generator = QueryGenerator()
+            self.query_generator = PromptBuilder()
             self.logger.info("Query generator initialized")
 
             # Initialize intelligence client
@@ -262,7 +267,7 @@ class DeepSightAdvisor:
 
     def load_artifacts(
         self, run_id: str, result: AdvisorResult
-    ) -> List[Union[DeepchecksArtifact, TrainingArtifacts]]:
+    ) -> List[Union[DeepchecksArtifacts, TrainingArtifacts]]:
         """
         Load and return artifacts for the given run_id.
 
@@ -274,54 +279,20 @@ class DeepSightAdvisor:
             List of loaded artifacts
         """
         start_time = time.time()
-        artifacts = []
-
         try:
-            for artifact_key in self.config.artifacts.artifact_keys:
-                try:
-                    self.logger.info(f"Loading artifact: {artifact_key.value}")
-
-                    artifact = self.artifact_manager.load_artifact(
-                        run_id=run_id,
-                        artifact_key=artifact_key,
-                        download_if_missing=self.config.artifacts.download_if_missing,
-                    )
-
-                    artifacts.append(artifact)
-                    result.add_artifact_loaded(artifact_key)
-                    self.logger.info(
-                        f"Successfully loaded artifact: {artifact_key.value}"
-                    )
-
-                except Exception as e:
-                    error_msg = f"Failed to load artifact {artifact_key.value}: {e}"
-                    self.logger.error(error_msg)
-                    result.add_artifact_failed(artifact_key, str(e))
-
-            if not artifacts:
-                raise ArtifactError(
-                    "No artifacts could be loaded",
-                    run_id=run_id,
-                    details={
-                        "requested_artifacts": [
-                            k.value for k in self.config.artifacts.artifact_keys
-                        ]
-                    },
-                )
-
-            result.artifact_loading_time = time.time() - start_time
+            context = self.artifacts_pipeline.run()
+            artifacts = [v for v in context.values() if v is not None]        
             self.logger.info(
                 f"Artifact loading completed in {result.artifact_loading_time:.2f} seconds"
             )
             return artifacts
-
         except Exception as e:
             result.artifact_loading_time = time.time() - start_time
             raise ArtifactError(f"Artifact loading failed: {e}", run_id=run_id)
 
     def generate_query(
         self,
-        artifacts: List[Union[DeepchecksArtifact, TrainingArtifacts]],
+        artifacts: List[Union[DeepchecksArtifacts, TrainingArtifacts]],
         result: AdvisorResult,
     ) -> str:
         """

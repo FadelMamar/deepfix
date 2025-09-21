@@ -1,5 +1,5 @@
 from .datamodel import (
-    DeepchecksArtifact,
+    DeepchecksArtifacts,
     ArtifactRecord,
     ArtifactStatus,
     DeepchecksResultHeaders,
@@ -12,7 +12,7 @@ from .repository import ArtifactRepository
 from .services import ChecksumService
 
 __all__ = [
-    "DeepchecksArtifact",
+    "DeepchecksArtifacts",
     "ArtifactRecord",
     "ArtifactStatus",
     "DeepchecksResultHeaders",

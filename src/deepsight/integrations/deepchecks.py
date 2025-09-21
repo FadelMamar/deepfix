@@ -26,7 +26,7 @@ from omegaconf import DictConfig, OmegaConf
 from ..utils.logging import get_logger
 from ..core.artifacts.datamodel import (
     DeepchecksParsedResult,
-    DeepchecksArtifact,
+    DeepchecksArtifacts,
     DeepchecksResultHeaders,
 )
 
@@ -168,7 +168,7 @@ class DeepchecksRunner:
         self.suite_model_evaluation = model_evaluation()
         self.output_dir = Path(self.config.output_dir or "results")
 
-    def _save_artifact(self, artifact: DeepchecksArtifact, dataset_name: str) -> None:
+    def _save_artifact(self, artifact: DeepchecksArtifacts, dataset_name: str) -> None:
         try:
             if not self.output_dir.exists():
                 self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -186,7 +186,7 @@ class DeepchecksRunner:
         train_data: VisionData,
         dataset_name: str,
         test_data: Optional[VisionData] = None,
-    ) -> DeepchecksArtifact:
+    ) -> DeepchecksArtifacts:
         output = {}
         if self.config.train_test_validation:
             out_train_test_validation = self.run_suite_train_test_validation(
@@ -206,7 +206,7 @@ class DeepchecksRunner:
             )
             output["model_evaluation"] = self.parser.run(out_model_evaluation)
 
-        artifact = DeepchecksArtifact(dataset_name=dataset_name, results=output)
+        artifact = DeepchecksArtifacts(dataset_name=dataset_name, results=output)
 
         if self.config.save_results:
             self._save_artifact(artifact=artifact, dataset_name=dataset_name)

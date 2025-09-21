@@ -6,13 +6,13 @@ from existing Pydantic models for LLM completion.
 """
 
 from .base import BasePromptBuilder
-from .deepchecks import DeepchecksPromptBuilder
-from .training import TrainingPromptBuilder
-from .generator import QueryGenerator
+from .deepchecks_prompt import DeepchecksPromptBuilder
+from .training_prompt import TrainingPromptBuilder
+from .prompt_builder import PromptBuilder
 
 __all__ = [
     "BasePromptBuilder",
     "DeepchecksPromptBuilder",
     "TrainingPromptBuilder",
-    "QueryGenerator",
+    "PromptBuilder",
 ]

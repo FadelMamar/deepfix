@@ -17,9 +17,10 @@ from sqlalchemy import (
 )
 from datetime import datetime
 from omegaconf import DictConfig
-from ...utils.config import DeepchecksConfig
 import pandas as pd
 import yaml
+
+from ...integrations.deepchecks import DeepchecksConfig
 
 
 class ArtifactPaths(Enum):
@@ -81,7 +82,7 @@ class DeepchecksParsedResult(BaseModel):
         )
 
 
-class DeepchecksArtifact(BaseModel):
+class DeepchecksArtifacts(BaseModel):
     dataset_name: str = Field(description="Name of the dataset")
     results: Dict[str, List[DeepchecksParsedResult]] = Field(
         description="Results of the artifact"
@@ -99,7 +100,7 @@ class DeepchecksArtifact(BaseModel):
         return dumped_dict
 
     @classmethod
-    def from_dict(self, d: Union[Dict[str, Any], DictConfig]) -> "DeepchecksArtifact":
+    def from_dict(self, d: Union[Dict[str, Any], DictConfig]) -> "DeepchecksArtifacts":
         results = {
             k: [DeepchecksParsedResult.from_dict(r) for r in v]
             for k, v in d["results"].items()
@@ -107,14 +108,14 @@ class DeepchecksArtifact(BaseModel):
         config = None
         if d.get("config"):
             config = DeepchecksConfig.from_dict(d["config"])
-        return DeepchecksArtifact(
+        return DeepchecksArtifacts(
             dataset_name=d["dataset_name"], results=results, config=config
         )
 
     @classmethod
     def from_file(
         cls, file_path: Optional[str] = None, dir_path: Optional[str] = None
-    ) -> "DeepchecksArtifact":
+    ) -> "DeepchecksArtifacts":
         assert (file_path is None) ^ (dir_path is None), (
             "Either file_path or dir_path must be provided"
         )

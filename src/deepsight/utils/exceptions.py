@@ -1,15 +1,15 @@
 """
-Custom exceptions for QueryGenerator module.
+Custom exceptions for PromptBuilder module.
 """
 
 
-class QueryGeneratorError(Exception):
-    """Base exception for QueryGenerator errors."""
+class PromptBuilderError(Exception):
+    """Base exception for PromptBuilder errors."""
 
     pass
 
 
-class ArtifactLoadError(QueryGeneratorError):
+class ArtifactLoadError(PromptBuilderError):
     """Raised when artifact loading fails."""
 
     def __init__(self, file_path: str, reason: str):
@@ -18,7 +18,7 @@ class ArtifactLoadError(QueryGeneratorError):
         super().__init__(f"Failed to load artifact from {file_path}: {reason}")
 
 
-class PromptBuilderError(QueryGeneratorError):
+class PromptBuilderError(PromptBuilderError):
     """Raised when prompt building fails."""
 
     def __init__(self, artifact_type: str, reason: str):
@@ -27,7 +27,7 @@ class PromptBuilderError(QueryGeneratorError):
         super().__init__(f"Failed to build prompt for {artifact_type}: {reason}")
 
 
-class LLMClientError(QueryGeneratorError):
+class LLMClientError(PromptBuilderError):
     """Raised when LLM client operations fail."""
 
     def __init__(self, operation: str, reason: str):
@@ -36,7 +36,7 @@ class LLMClientError(QueryGeneratorError):
         super().__init__(f"LLM client {operation} failed: {reason}")
 
 
-class ConfigurationError(QueryGeneratorError):
+class ConfigurationError(PromptBuilderError):
     """Raised when configuration is invalid."""
 
     def __init__(self, config_section: str, reason: str):
@@ -45,7 +45,7 @@ class ConfigurationError(QueryGeneratorError):
         super().__init__(f"Configuration error in {config_section}: {reason}")
 
 
-class ValidationError(QueryGeneratorError):
+class ValidationError(PromptBuilderError):
     """Raised when input validation fails."""
 
     def __init__(self, field: str, reason: str):

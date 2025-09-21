@@ -45,9 +45,11 @@ class MLflowConfig(BaseModel):
 class ArtifactConfig(BaseModel):
     """Configuration for artifact management."""
 
-    artifact_keys: List[ArtifactPaths] = Field(
-        default=[ArtifactPaths.TRAINING, ArtifactPaths.DEEPCHECKS],
-        description="List of artifact types to load",
+    load_training: bool = Field(
+        default=True, description="Whether to load training artifacts"
+    )
+    load_checks: bool = Field(
+        default=True, description="Whether to load Deepchecks artifacts"
     )
     download_if_missing: bool = Field(
         default=True, description="Whether to download artifacts if not locally cached"

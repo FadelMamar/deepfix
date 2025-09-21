@@ -1,12 +1,12 @@
 """
-Base prompt builder for QueryGenerator.
+Base prompt builder for PromptBuilder.
 
 This module provides the abstract base class for all prompt builders.
 """
 
 from abc import ABC, abstractmethod
 from typing import Union, Optional, Dict, Any, List
-from ...artifacts.datamodel import DeepchecksArtifact, TrainingArtifacts
+from ...artifacts.datamodel import DeepchecksArtifacts, TrainingArtifacts
 
 
 class BasePromptBuilder(ABC):
@@ -17,7 +17,7 @@ class BasePromptBuilder(ABC):
         """Check if this builder can handle the artifact type.
 
         Args:
-            artifact_type: The type of artifact (e.g., 'DeepchecksArtifact', 'TrainingArtifacts')
+            artifact_type: The type of artifact (e.g., 'DeepchecksArtifacts', 'TrainingArtifacts')
 
         Returns:
             True if this builder can handle the artifact type, False otherwise
@@ -27,7 +27,7 @@ class BasePromptBuilder(ABC):
     @abstractmethod
     def build_prompt(
         self,
-        artifact: Union[DeepchecksArtifact, TrainingArtifacts],
+        artifact: Union[DeepchecksArtifacts, TrainingArtifacts],
         context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Build structured prompt from artifact.
@@ -61,32 +61,6 @@ class BasePromptBuilder(ABC):
                 context_parts.append(f"- {key}: {value}")
 
         return "\n".join(context_parts)
-
-    def _truncate_prompt(self, prompt: str, max_length: int = 4000) -> str:
-        """Truncate prompt if it exceeds maximum length.
-
-        Args:
-            prompt: The prompt to potentially truncate
-            max_length: Maximum allowed length
-
-        Returns:
-            Truncated prompt if necessary
-        """
-        if len(prompt) <= max_length:
-            return prompt
-
-        # Try to truncate at a sentence boundary
-        truncated = prompt[:max_length]
-        last_period = truncated.rfind(".")
-        last_newline = truncated.rfind("\n")
-
-        # Use the last complete sentence or line
-        if last_period > max_length * 0.8:  # If we can keep 80% of content
-            return truncated[: last_period + 1] + "..."
-        elif last_newline > max_length * 0.8:
-            return truncated[:last_newline] + "..."
-        else:
-            return truncated + "..."
 
     def _get_query_instructions(self) -> List[str]:
         """Get query-specific instructions based on query type."""

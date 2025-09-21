@@ -1,21 +1,18 @@
 """
 Query Generator module for DeepSight Copilot.
 
-This module provides the QueryGenerator class and related components for
+This module provides the PromptBuilder class and related components for
 orchestrating LLM prompt generation from existing Pydantic models.
 """
 
-from .builders import DeepchecksPromptBuilder, TrainingPromptBuilder, QueryGenerator
-from .builders.config import QueryGeneratorConfig, QueryType
+from .builders import DeepchecksPromptBuilder, TrainingPromptBuilder, PromptBuilder
 from .intelligence import IntelligenceClient,IntelligenceProviders,IntelligenceConfig, CursorConfig, LLMConfig
 
 __all__ = [
-    "QueryGenerator",
-    "QueryGeneratorConfig",
+    "PromptBuilder",
     "DeepchecksPromptBuilder",
     "TrainingPromptBuilder",
-    "QueryGenerator",
-    "QueryGeneratorConfig",
+    "PromptBuilder",
     "QueryType",
     "IntelligenceClient",
     "IntelligenceProviders",
