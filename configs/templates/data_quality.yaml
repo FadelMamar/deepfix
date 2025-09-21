@@ -1,0 +1,49 @@
+# DeepSight Advisor - Data Quality Analysis Template
+# This template focuses on data quality and integrity analysis
+
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  run_id: "your_run_id_here"  # Replace with actual run ID
+  download_dir: "tmp"
+  experiment_name: null
+
+artifacts:
+  artifact_keys:
+    - "deepchecks"
+  download_if_missing: true
+  cache_enabled: true
+  sqlite_path: "tmp/artifacts.db"
+
+query:
+  context:
+    analysis_type: "data_quality"
+    focus_areas: 
+      - "data_integrity"
+      - "data_drift"
+      - "label_quality"
+      - "outlier_detection"
+  custom_instructions: |
+    Please focus your analysis on:
+    1. Data integrity issues and anomalies
+    2. Data drift between train/test sets
+    3. Label quality and consistency
+    4. Outlier detection and impact
+    5. Data preprocessing recommendations
+    6. Data collection improvements
+  prompt_builders: null
+
+intelligence:
+  provider_type: "coding_agent"
+  provider_name: "cursor_agent"
+  auto_execute: true
+  context:
+    business_context: "Data quality assessment and improvement"
+    urgency: "standard"
+  timeout: 300
+
+output:
+  save_prompt: true
+  save_response: true
+  output_dir: "data_quality_analysis"
+  format: "txt"
+  verbose: true

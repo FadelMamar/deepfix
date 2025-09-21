@@ -98,7 +98,7 @@ python examples/run_artifact_manager.py
 **Features**:
 - Artifact loading and management
 - Query generation from multiple artifacts
-- Integration with AI providers
+- Integration with AI IntelligenceProviders
 - Prompt building for analysis and insights
 
 **Usage**:
@@ -193,7 +193,7 @@ result = advisor.run_analysis()
 **What the Advisor Does**:
 1. **Artifact Loading**: Automatically loads Training and Deepchecks artifacts from MLflow
 2. **Query Generation**: Creates intelligent prompts from loaded artifacts
-3. **AI Analysis**: Executes queries using configured AI providers
+3. **AI Analysis**: Executes queries using configured AI IntelligenceProviders
 4. **Result Saving**: Saves prompts, responses, and formatted results to specified directories
 5. **Progress Tracking**: Provides detailed logging throughout the entire process
 

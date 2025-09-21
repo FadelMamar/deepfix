@@ -1,10 +1,19 @@
 """Main Cursor CLI integration class."""
+from typing import Dict, Any, Optional, List, Union
+import time
+import traceback
 
-from typing import Optional, Dict, Any
-from .config import CursorConfig
 from .process import ProcessManager
 from .errors import CursorResponseError
 
+from ....models import (
+    IntelligenceResponse,
+    IntelligenceProviderError,
+    IntelligenceProviders,
+    Capabilities,
+    CursorConfig
+)
+from ...base import BaseProvider
 
 class Cursor:
     """Main integration class for Cursor CLI non-interactive mode."""
@@ -91,3 +100,45 @@ class Cursor:
                 if self.config.additional_args is None:
                     self.config.additional_args = {}
                 self.config.additional_args[key] = value
+
+class CursorAgentProvider(BaseProvider):
+    def __init__(self, config: CursorConfig):
+        self.config = config
+        self.agent = Cursor(**self.config.model_dump())
+
+    def execute(
+        self, prompt: str, context: Optional[Dict[str, Any]] = None
+    ) -> IntelligenceResponse:
+        start = time.time()
+        try:
+            enhanced_prompt = self._enhance_prompt_for_coding(prompt, context or {})
+            resp = self.agent.query(prompt=enhanced_prompt)
+            latency_ms = int((time.time() - start) * 1000)
+            return IntelligenceResponse(
+                content=resp,
+                provider=IntelligenceProviders.CURSOR,
+                latency_ms=latency_ms,
+            )
+        except Exception:
+            raise IntelligenceProviderError(
+                f"Cursor agent failed: {traceback.format_exc()}"
+            )
+
+    def _enhance_prompt_for_coding(self, prompt: str, context: Dict[str, Any]) -> str:
+        parts = [
+            "You are an expert data scientist with 10 years experience debugging AI models.",
+            "You provide actionable real-world solutions and resolution guidance.",
+            "",
+            prompt,
+        ]
+        if context.get("code_context"):
+            parts.insert(-1, f"\nCode context: {context['code_context']}")
+        return "\n".join(parts)
+
+    def get_capabilities(self) -> List[Capabilities]:
+        return [
+            Capabilities.CODE_GENERATION,
+            Capabilities.DEBUGGING,
+            Capabilities.REASONING,
+            Capabilities.TEXT_GENERATION,
+        ]

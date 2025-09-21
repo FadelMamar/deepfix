@@ -43,7 +43,7 @@
 - **Solution Recommendations**: Evidence-based suggestions for model improvement
 - **Problem Classification**: Intelligent categorization of training issues
 - **Intelligent Prompt Building**: AI-powered query generation from ML artifacts
-- **Multi-Provider Support**: Integration with various AI providers and LLMs
+- **Multi-Provider Support**: Integration with various AI IntelligenceProviders and LLMs
 
 ## 🚀 Quick Start
 
@@ -154,10 +154,10 @@ deepsight/
 │   │   └── intelligence/      # AI intelligence integration
 │   │       ├── client.py      # Intelligence client
 │   │       ├── models.py      # Intelligence models
-│   │       └── providers/     # AI provider implementations
+│   │       └── IntelligenceProviders/     # AI provider implementations
 │   │           ├── base.py    # Base provider interface
-│   │           ├── coding_agent/ # Coding agent providers
-│   │           └── llm/       # LLM providers
+│   │           ├── coding_agent/ # Coding agent IntelligenceProviders
+│   │           └── llm/       # LLM IntelligenceProviders
 ├── 📁 integrations/            # External tool integrations
 │   ├── cursor/                # Cursor AI integration
 │   ├── deepchecks.py          # Deepchecks validation runner

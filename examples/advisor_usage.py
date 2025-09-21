@@ -6,8 +6,9 @@ to run a complete ML analysis pipeline.
 """
 
 import fire
-from deepsight.core.advisor import AdvisorConfig, MLflowConfig
-from deepsight.core.advisor import DeepSightAdvisor, run_analysis
+from deepsight.core.config import MLflowConfig,ArtifactConfig
+from deepsight.core.query import IntelligenceConfig,CursorConfig,LLMConfig
+from deepsight.core.advisor import DeepSightAdvisor, run_analysis,AdvisorConfig
 from deepsight.utils.logging import setup_logging, get_logger
 
 # Setup logging
@@ -28,10 +29,28 @@ def example_1():
 
 def example_2():
     """Example 2: Using full configuration"""
+
+    api_key = "your_api_key"  # Replace with your actual API key
+    base_url = "https://api.openai.com/v1"  # Replace with your actual base URL
+    model_name = "openai/gpt-4"  # Replace with your desired model name
+    temperature = 0.7
+    max_tokens = 1024
+
     config = AdvisorConfig(
         mlflow=MLflowConfig(
             tracking_uri="http://localhost:5000",
             run_id="07c04cc42fd9461e98f7eb0bf42444fb",
+        ),
+        artifacts=ArtifactConfig(),
+        intelligence=IntelligenceConfig(provider_name="llm",
+                                        timeout=30, 
+                                        llm_config=LLMConfig(api_key=api_key,
+                                                             base_url=base_url,
+                                                             model_name=model_name,
+                                                             temperature=temperature,
+                                                             max_tokens=max_tokens
+                                                            ),
+                                        cursor_config=CursorConfig(model="auto")
         )
     )
     advisor = DeepSightAdvisor(config)
@@ -40,26 +59,10 @@ def example_2():
     logger.info(f"Summary: {advisor.get_summary(result)}")
 
 
-def example_3():
-    """Example 3: Using dictionary configuration"""
-    config_dict = {
-        "mlflow": {
-            "tracking_uri": "http://localhost:5000",
-            "run_id": "07c04cc42fd9461e98f7eb0bf42444fb",
-        },
-        "output": {"output_dir": "test_output", "format": "txt"},
-    }
-    advisor = DeepSightAdvisor(config_dict)
-    result = advisor.run_analysis()
-    logger.info(f"Analysis completed: {result.success}")
-    logger.info(f"Output files: {list(result.output_paths.keys())}")
-
-
 if __name__ == "__main__":
     fire.Fire(
         {
             "example_1": example_1,
             "example_2": example_2,
-            "example_3": example_3,
         }
     )

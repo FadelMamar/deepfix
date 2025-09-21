@@ -9,14 +9,6 @@ The advisor serves as a unified interface for running comprehensive ML analysis
 workflows with minimal configuration.
 """
 
-from .config import (
-    AdvisorConfig,
-    MLflowConfig,
-    ArtifactConfig,
-    QueryConfig,
-    IntelligenceConfig,
-    OutputConfig,
-)
 from .errors import (
     AdvisorError,
     ConfigurationError,
@@ -25,16 +17,9 @@ from .errors import (
     OutputError,
 )
 from .result import AdvisorResult
-from .orchestrator import DeepSightAdvisor, run_analysis
+from .orchestrator import AdvisorConfig, DeepSightAdvisor, run_analysis
 
 __all__ = [
-    # Configuration
-    "AdvisorConfig",
-    "MLflowConfig",
-    "ArtifactConfig",
-    "QueryConfig",
-    "IntelligenceConfig",
-    "OutputConfig",
     # Errors
     "AdvisorError",
     "ConfigurationError",
@@ -42,6 +27,7 @@ __all__ = [
     "QueryError",
     "OutputError",
     # Core Classes
+    "AdvisorConfig",
     "AdvisorResult",
     "DeepSightAdvisor",
     "run_analysis",

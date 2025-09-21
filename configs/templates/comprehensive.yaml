@@ -1,0 +1,48 @@
+# DeepSight Advisor - Comprehensive Analysis Template
+# This template provides a complete configuration for comprehensive ML analysis
+
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  run_id: "your_run_id_here"  # Replace with actual run ID
+  download_dir: "tmp"
+  experiment_name: null
+
+artifacts:
+  artifact_keys:
+    - "training_artifacts"
+    - "deepchecks"
+  download_if_missing: true
+  cache_enabled: true
+  sqlite_path: "tmp/artifacts.db"
+
+query:
+  context:
+    analysis_type: "comprehensive"
+    focus_areas: 
+      - "data_quality"
+      - "model_performance"
+      - "training_metrics"
+      - "validation_results"
+  custom_instructions: |
+    Please provide a comprehensive analysis focusing on:
+    1. Data quality issues and recommendations
+    2. Model performance evaluation
+    3. Training process insights
+    4. Actionable recommendations for improvement
+  prompt_builders: null
+
+intelligence:
+  provider_type: "coding_agent"
+  provider_name: "cursor_agent"
+  auto_execute: true
+  context:
+    business_context: "ML model analysis and optimization"
+    urgency: "standard"
+  timeout: 300
+
+output:
+  save_prompt: true
+  save_response: true
+  output_dir: "advisor_output"
+  format: "json"
+  verbose: true

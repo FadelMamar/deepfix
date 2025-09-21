@@ -1,0 +1,49 @@
+# DeepSight Advisor - Performance-Focused Analysis Template
+# This template focuses on model performance analysis
+
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  run_id: "your_run_id_here"  # Replace with actual run ID
+  download_dir: "tmp"
+  experiment_name: null
+
+artifacts:
+  artifact_keys:
+    - "training_artifacts"
+    - "deepchecks"
+  download_if_missing: true
+  cache_enabled: true
+  sqlite_path: "tmp/artifacts.db"
+
+query:
+  context:
+    analysis_type: "performance"
+    focus_areas: 
+      - "model_performance"
+      - "training_metrics"
+      - "validation_results"
+      - "overfitting_detection"
+  custom_instructions: |
+    Please focus your analysis on:
+    1. Model performance metrics and trends
+    2. Training vs validation performance comparison
+    3. Signs of overfitting or underfitting
+    4. Performance optimization recommendations
+    5. Comparison with baseline or previous models
+  prompt_builders: null
+
+intelligence:
+  provider_type: "coding_agent"
+  provider_name: "cursor_agent"
+  auto_execute: true
+  context:
+    business_context: "Model performance optimization"
+    urgency: "high"
+  timeout: 300
+
+output:
+  save_prompt: true
+  save_response: true
+  output_dir: "performance_analysis"
+  format: "yaml"
+  verbose: true

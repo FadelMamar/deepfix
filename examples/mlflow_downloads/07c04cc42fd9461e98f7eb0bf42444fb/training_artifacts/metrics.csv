@@ -1,0 +1,6 @@
+key,value,timestamp,step,model_id,dataset_name,dataset_digest,run_id
+val_loss,0.0,1756814728819,2,,,,
+train_loss,3463.166748046875,1756814729509,2,,,,
+val_f1score,0.007425742689520121,1756814728819,2,,,,
+val_precision,0.009900989942252636,1756814728819,2,,,,
+val_recall,0.005940594244748354,1756814728819,2,,,,

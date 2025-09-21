@@ -5,9 +5,11 @@ Intelligence client and provider interfaces for executing prompts against LLMs a
 from .client import IntelligenceClient
 from .models import (
     IntelligenceResponse,
-    ProviderType,
     IntelligenceProviderError,
-    Providers,
+    IntelligenceProviders,
+    IntelligenceConfig, 
+    CursorConfig, 
+    LLMConfig
 )
 from .providers.llm.dspy import DspyLLMProvider
 from .providers.coding_agent.cursor import CursorAgentProvider
@@ -19,5 +21,8 @@ __all__ = [
     "IntelligenceProviderError",
     "DspyLLMProvider",
     "CursorAgentProvider",
-    "Providers",
+    "IntelligenceProviders",
+    "IntelligenceConfig",
+    "CursorConfig",
+    "LLMConfig",
 ]

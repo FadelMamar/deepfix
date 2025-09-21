@@ -8,30 +8,135 @@ ML analysis pipeline from artifact loading to intelligent query execution.
 import time
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
+import traceback
+from pydantic import BaseModel, Field
+import yaml
 
-from ...core import ArtifactsManager
 from ...integrations.mlflow import MLflowManager
-from ...core.artifacts.datamodel import (
-    ArtifactPaths,
+from ..artifacts import (
     DeepchecksArtifact,
     TrainingArtifacts,
+    ArtifactsManager
 )
-from ...core.query import QueryGenerator
-from ...core.query.intelligence import IntelligenceClient, Providers
+
+from ..query import QueryGenerator,IntelligenceClient,IntelligenceConfig
 from ...utils.logging import get_logger
 
-from .config import AdvisorConfig, load_config
+from ..config import QueryConfig, OutputConfig,MLflowConfig,ArtifactConfig
 from .result import AdvisorResult
 from .errors import (
-    AdvisorError,
     ConfigurationError,
     ArtifactError,
     QueryError,
     OutputError,
-    MLflowError,
     IntelligenceError,
 )
 
+class AdvisorConfig(BaseModel):
+    """Main configuration class for DeepSight Advisor."""
+
+    mlflow: MLflowConfig = Field(description="MLflow configuration")
+    artifacts: ArtifactConfig = Field(
+        default_factory=ArtifactConfig, description="Artifact management configuration"
+    )
+    query: QueryConfig = Field(
+        default_factory=QueryConfig, description="Query generation configuration"
+    )
+    intelligence: IntelligenceConfig = Field(
+        default_factory=IntelligenceConfig,
+        description="Intelligence client configuration",
+    )
+    output: OutputConfig = Field(
+        default_factory=OutputConfig, description="Output configuration"
+    )
+
+    @classmethod
+    def from_file(cls, config_path: Union[str, Path]) -> "AdvisorConfig":
+        """Load configuration from YAML file."""
+        config_path = Path(config_path)
+
+        if not config_path.exists():
+            raise FileNotFoundError(f"Configuration file not found: {config_path}")
+
+        try:
+            with open(config_path, "r") as f:
+                config_data = yaml.safe_load(f)
+
+            return cls(**config_data)
+
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML in configuration file: {e}")
+        except Exception as e:
+            raise ValueError(f"Error loading configuration: {e}")
+
+    @classmethod
+    def from_dict(cls, config_dict: Dict[str, Any]) -> "AdvisorConfig":
+        """Create configuration from dictionary."""
+        try:
+            return cls(**config_dict)
+        except Exception as e:
+            raise ValueError(f"Error creating configuration from dict: {e}")
+
+    def to_file(self, output_path: Union[str, Path]) -> None:
+        """Save configuration to YAML file."""
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            with open(output_path, "w") as f:
+                yaml.dump(self.model_dump(), f, default_flow_style=False, indent=2)
+        except Exception as e:
+            raise ValueError(f"Error saving configuration: {e}")
+
+    def merge(self, other: "AdvisorConfig") -> "AdvisorConfig":
+        """Merge another configuration into this one."""
+        # Convert to dict, merge, and create new instance
+        self_dict = self.model_dump()
+        other_dict = other.model_dump()
+
+        # Deep merge dictionaries
+        merged_dict = self._deep_merge(self_dict, other_dict)
+
+        return self.__class__(**merged_dict)
+
+    def _deep_merge(
+        self, base: Dict[str, Any], override: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Deep merge two dictionaries."""
+        result = base.copy()
+
+        for key, value in override.items():
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
+                result[key] = self._deep_merge(result[key], value)
+            else:
+                result[key] = value
+
+        return result
+
+    def validate(self) -> None:
+        """Validate the complete configuration."""
+        # Create output directory if it doesn't exist
+        output_dir = Path(self.output.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+
+def load_config(
+    config_source: Union[str, Path, Dict[str, Any], AdvisorConfig],
+) -> AdvisorConfig:
+    """Load configuration from various sources."""
+    if isinstance(config_source, AdvisorConfig):
+        return config_source
+    elif isinstance(config_source, dict):
+        return AdvisorConfig.from_dict(config_source)
+    elif isinstance(config_source, (str, Path)):
+        return AdvisorConfig.from_file(config_source)
+    else:
+        raise ValueError(f"Unsupported config source type: {type(config_source)}")
+    
 
 class DeepSightAdvisor:
     """
@@ -91,7 +196,7 @@ class DeepSightAdvisor:
             self.logger.info("Query generator initialized")
 
             # Initialize intelligence client
-            self.intelligence_client = IntelligenceClient()
+            self.intelligence_client = IntelligenceClient(self.config.intelligence)
             self.logger.info("Intelligence client initialized")
 
         except Exception as e:
@@ -279,8 +384,6 @@ class DeepSightAdvisor:
             # Execute query
             response = self.intelligence_client.execute_query(
                 prompt=prompt,
-                provider_type=self.config.intelligence.provider_type,
-                provider_name=self.config.intelligence.provider_name,
                 context=context,
             )
 
@@ -295,7 +398,7 @@ class DeepSightAdvisor:
 
         except Exception as e:
             result.intelligence_execution_time = time.time() - start_time
-            raise IntelligenceError(f"Query execution failed: {e}")
+            raise IntelligenceError(f"Query execution failed: {traceback.format_exc()}")
 
     def save_results(self, result: AdvisorResult) -> None:
         """
@@ -415,3 +518,9 @@ def run_analysis(
     # Create advisor and run analysis
     advisor = DeepSightAdvisor(config)
     return advisor.run_analysis()
+
+def create_default_config(
+    run_id: str, tracking_uri: str = "http://localhost:5000"
+) -> AdvisorConfig:
+    """Create a default configuration with minimal required parameters."""
+    return AdvisorConfig(mlflow=MLflowConfig(tracking_uri=tracking_uri, run_id=run_id))
