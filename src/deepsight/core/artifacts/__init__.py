@@ -10,6 +10,7 @@ from .datamodel import (
 from .manager import ArtifactsManager
 from .repository import ArtifactRepository
 from .services import ChecksumService
+from .prompt_builders import PromptBuilder
 
 __all__ = [
     "DeepchecksArtifacts",
@@ -22,4 +23,7 @@ __all__ = [
     "ArtifactsManager",
     "ArtifactRepository",
     "ChecksumService",
+    "PromptBuilder",
+    "DeepchecksPromptBuilder",
+    "TrainingPromptBuilder",
 ]

@@ -74,9 +74,6 @@ class AdvisorResult(BaseModel):
         return {
             "run_id": self.run_id,
             "timestamp": self.timestamp.isoformat(),
-            "success": self.success,
-            "artifacts_loaded": len(self.artifacts_loaded),
-            "artifacts_failed": len(self.artifacts_failed),
             "prompt_generated": self.prompt_generated is not None,
             "response_received": self.response is not None,
             "execution_time": self.execution_time,
@@ -85,9 +82,6 @@ class AdvisorResult(BaseModel):
     def to_dict(self, include_content: bool = True) -> Dict[str, Any]:
         """Convert result to dictionary."""
         result_dict = self.model_dump()
-
-        # Convert Path objects to strings
-        result_dict["output_paths"] = {k: str(v) for k, v in self.output_paths.items()}
 
         # Convert datetime to ISO string
         result_dict["timestamp"] = self.timestamp.isoformat()
@@ -143,26 +137,12 @@ class AdvisorResult(BaseModel):
         lines.append("=" * 60)
         lines.append(f"Run ID: {self.run_id}")
         lines.append(f"Timestamp: {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
-        lines.append(f"Success: {self.success}")
         lines.append(f"Execution Time: {self.execution_time:.2f} seconds")
-        lines.append("")
-
-        # Artifacts section
-        lines.append("ARTIFACTS:")
-        lines.append("-" * 20)
-        lines.append(f"Loaded: {len(self.artifacts_loaded)}")
-        for artifact in self.artifacts_loaded:
-            lines.append(f"  ✓ {artifact}")
-
-        if self.artifacts_failed:
-            lines.append(f"Failed: {len(self.artifacts_failed)}")
-            for artifact in self.artifacts_failed:
-                lines.append(f"  ✗ {artifact}")
         lines.append("")
 
         # Query section
         if self.prompt_generated:
-            lines.append("GENERATED PROMPT:")
+            lines.append("PROMPT:")
             lines.append("-" * 20)
             lines.append(f"Length: {self.prompt_length} characters")
             lines.append("Content:")
@@ -176,14 +156,6 @@ class AdvisorResult(BaseModel):
             lines.append(f"Length: {self.response_length} characters")
             lines.append("Content:")
             lines.append(self.response_content)
-            lines.append("")
-
-        # Output files section
-        if self.output_paths:
-            lines.append("OUTPUT FILES:")
-            lines.append("-" * 20)
-            for key, path in self.output_paths.items():
-                lines.append(f"{key}: {path}")
             lines.append("")
 
         text_content = "\n".join(lines)

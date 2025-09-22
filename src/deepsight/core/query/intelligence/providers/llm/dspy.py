@@ -46,7 +46,7 @@ class DspyRouter:
 
     def generate(
         self, prompt: str, context: Optional[Dict[str, Union[str,int,float,dspy.Image]]] = None
-    ) -> Any:
+    ) -> str:
         response = self.llm(prompt=prompt,context=context)
         return response.recommendation
 
@@ -68,11 +68,8 @@ class DspyLLMProvider(BaseProvider):
             )
             latency_ms = int((time.time() - start) * 1000)
             return IntelligenceResponse(
-                content=result.content,
-                provider=f"dspy::{self.backend}::{self.model}",
-                metadata=self.config.model_dump(),
-                tokens_used=(result.metadata or {}).get("tokens_used"),
-                cost=(result.metadata or {}).get("cost"),
+                content=result,
+                provider=f"dspy::{self.config.model_name}",
                 latency_ms=latency_ms,
             )
         except Exception as e:

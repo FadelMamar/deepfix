@@ -25,6 +25,7 @@ class Cursor:
         timeout: int = 300,
         cli_path: str = "cursor-agent",
         working_directory: Optional[str] = None,
+        config:Optional[CursorConfig]=None,
         **kwargs,
     ):
         """Initialize Cursor integration.
@@ -37,14 +38,18 @@ class Cursor:
             working_directory: Working directory for CLI operations
             **kwargs: Additional arguments to pass to Cursor CLI
         """
-        self.config = CursorConfig(
-            model=model,
-            output_format=output_format,
-            timeout=timeout,
-            cli_path=cli_path,
-            working_directory=working_directory,
-            additional_args=kwargs if kwargs else None,
-        )
+        if config is None:
+            self.config = CursorConfig(
+                model=model,
+                output_format=output_format,
+                timeout=timeout,
+                cli_path=cli_path,
+                working_directory=working_directory,
+                additional_args=kwargs if kwargs else None,
+            )
+        else:
+            self.config = config
+
         self.process_manager = ProcessManager(cli_path=cli_path)
 
     def query(self, prompt: str) -> str:
@@ -104,7 +109,7 @@ class Cursor:
 class CursorAgentProvider(BaseProvider):
     def __init__(self, config: CursorConfig):
         self.config = config
-        self.agent = Cursor(**self.config.model_dump())
+        self.agent = Cursor(config=config)
 
     def execute(
         self, prompt: str, context: Optional[Dict[str, Any]] = None
@@ -116,7 +121,7 @@ class CursorAgentProvider(BaseProvider):
             latency_ms = int((time.time() - start) * 1000)
             return IntelligenceResponse(
                 content=resp,
-                provider=IntelligenceProviders.CURSOR,
+                provider=f"{IntelligenceProviders.CURSOR.value}::{self.config.model}",
                 latency_ms=latency_ms,
             )
         except Exception:
@@ -128,8 +133,8 @@ class CursorAgentProvider(BaseProvider):
         parts = [
             "You are an expert data scientist with 10 years experience debugging AI models.",
             "You provide actionable real-world solutions and resolution guidance.",
-            "",
             prompt,
+            self.instructions,
         ]
         if context.get("code_context"):
             parts.insert(-1, f"\nCode context: {context['code_context']}")
@@ -142,3 +147,16 @@ class CursorAgentProvider(BaseProvider):
             Capabilities.REASONING,
             Capabilities.TEXT_GENERATION,
         ]
+    
+    @property
+    def instructions(self) -> str:
+        return """ONLY ANSWER BASED ON THE PROVIDED INFORMATION. DO NOT MAKE UP ANYTHING or READ ANY OTHER FILES.
+                 DO NOT CREATE ANY NEW FILES OR DIRECTORIES.
+                 DO NOT EDIT ANY FILES.
+                 DO NOT DELETE ANY FILES.
+                 DO NOT RENAME ANY FILES.
+                 DO NOT MOVE ANY FILES.
+                 DO NOT COPY ANY FILES.
+                 DO NOT PASTE ANY FILES.
+                 ANSWER IN PLAIN TEXT.              
+        """

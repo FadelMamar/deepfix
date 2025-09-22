@@ -38,7 +38,7 @@ census_campaign_results/
 runs/
 models-registry/
 /logs/
-
+advisor_output/
 uv.lock
 
 *visualization.html

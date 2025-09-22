@@ -80,12 +80,20 @@ class ArtifactsManager:
             checksum = self.checksum.compute_sha256(str(final_path))
             size_bytes = final_path.stat().st_size
 
-        self.repo.update_local_path(
+        # update or create record
+        rec = self.repo.update_local_path(
             run_id=run_id,
             artifact_key=artifact_key,
             local_path=str(final_path),
             status=ArtifactStatus.DOWNLOADED,
         )
+        if rec is None:
+            self.register_artifact(
+                run_id=run_id,
+                artifact_key=artifact_key,
+                local_path=str(final_path),
+                source_uri=self.mlflow.tracking_uri,
+            )
 
         # update checksum/size if record exists
         existing = self.repo.get(run_id, artifact_key)

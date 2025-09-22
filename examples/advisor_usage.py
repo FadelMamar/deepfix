@@ -6,10 +6,12 @@ to run a complete ML analysis pipeline.
 """
 
 import fire
-from deepsight.core.config import MLflowConfig,ArtifactConfig
+import os
+from deepsight.core.config import MLflowConfig,ArtifactConfig, OutputConfig, PromptConfig
 from deepsight.core.query import IntelligenceConfig,CursorConfig,LLMConfig
 from deepsight.core.advisor import DeepSightAdvisor, run_analysis,AdvisorConfig
 from deepsight.utils.logging import setup_logging, get_logger
+from dotenv import load_dotenv
 
 # Setup logging
 setup_logging(level="INFO")
@@ -27,21 +29,28 @@ def example_1():
     logger.info(f"Execution time: {result.execution_time:.2f}s")
 
 
-def example_2():
+def example_2(env_file:str):
     """Example 2: Using full configuration"""
+    load_dotenv(env_file,override=True)
 
-    api_key = "your_api_key"  # Replace with your actual API key
-    base_url = "https://api.openai.com/v1"  # Replace with your actual base URL
-    model_name = "openai/gpt-4"  # Replace with your desired model name
+    api_key = os.getenv("LLM_API_KEY")  # Replace with your actual API key
+    base_url = "https://openrouter.ai/api/v1"  # Replace with your actual base URL
+    model_name = "openai/x-ai/grok-4-fast:free"  # Replace with your desired model name
     temperature = 0.7
     max_tokens = 1024
+    run_id = "07c04cc42fd9461e98f7eb0bf42444fb"
 
     config = AdvisorConfig(
         mlflow=MLflowConfig(
             tracking_uri="http://localhost:5000",
-            run_id="07c04cc42fd9461e98f7eb0bf42444fb",
+            download_dir="mlflow_downloads",
         ),
-        artifacts=ArtifactConfig(),
+        prompt=PromptConfig(custom_instructions=None),
+        artifacts=ArtifactConfig(load_checks=True, 
+                                 load_training=True,
+                                 cache_enabled=True,
+                                 sqlite_path="tmp/artifacts.db"
+                                ),
         intelligence=IntelligenceConfig(provider_name="llm",
                                         timeout=30, 
                                         llm_config=LLMConfig(api_key=api_key,
@@ -51,12 +60,18 @@ def example_2():
                                                              max_tokens=max_tokens
                                                             ),
                                         cursor_config=CursorConfig(model="auto")
-        )
+        ),
+        output=OutputConfig(output_dir="advisor_output", 
+                            save_prompt=True, 
+                            save_text=True,
+                            save_response=False,
+                            format="txt"
+                        ),
     )
     advisor = DeepSightAdvisor(config)
-    result = advisor.run_analysis()
-    logger.info(f"Analysis completed: {result.success}")
-    logger.info(f"Summary: {advisor.get_summary(result)}")
+    result = advisor.run_analysis(run_id=run_id)
+    if result is not None:
+        logger.info(f"Summary: {result.get_summary()}")
 
 
 if __name__ == "__main__":

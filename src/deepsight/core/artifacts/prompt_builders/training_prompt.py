@@ -86,8 +86,8 @@ class TrainingPromptBuilder(BasePromptBuilder):
     ) -> str:
         """Build structured prompt from TrainingArtifacts."""
         prompt_parts = [
-            f"Metrics available: {artifact.metrics_values is not None}",
-            f"Parameters available: {artifact.params is not None}",
+            #f"Metrics available: {artifact.metrics_values is not None}",
+            #f"Parameters available: {artifact.params is not None}",
         ]
 
         # Add metrics analysis if available
@@ -118,10 +118,6 @@ class TrainingPromptBuilder(BasePromptBuilder):
             for key, value in artifact.params.items():
                 prompt_parts.append(f"- {key}: {value}")
 
-        # Add query-specific instructions
-        query_instructions = self._get_query_instructions()
-        prompt_parts.extend(query_instructions)
-
         # Add context if provided
         if context:
             context_str = self._format_context(context)
@@ -132,36 +128,4 @@ class TrainingPromptBuilder(BasePromptBuilder):
         full_prompt = "\n".join(prompt_parts)
         return full_prompt
 
-    def _get_query_instructions(self) -> List[str]:
-        """Get query-specific instructions based on query type."""
-        base_instructions = [
-            "\nPlease provide:",
-            "1. Analysis of training performance",
-            "2. Overfitting assessment and recommendations",
-            "3. Suggested hyperparameter adjustments",
-            "4. Next steps for model improvement",
-        ]
-
-        base_instructions.extend(
-            [
-                "5. Specific overfitting indicators and their severity",
-                "6. Regularization techniques to implement",
-                "7. Data augmentation recommendations",
-            ]
-        )
-        base_instructions.extend(
-            [
-                "8. Performance bottleneck identification",
-                "9. Model architecture optimization suggestions",
-                "10. Training strategy improvements",
-            ]
-        )
-        base_instructions.extend(
-            [
-                "11. Hyperparameter sensitivity analysis",
-                "12. Learning rate schedule recommendations",
-                "13. Batch size and optimizer suggestions",
-            ]
-        )
-
-        return base_instructions
+    

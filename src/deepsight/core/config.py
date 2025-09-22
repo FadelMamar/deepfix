@@ -17,7 +17,7 @@ class MLflowConfig(BaseModel):
     tracking_uri: str = Field(
         default="http://localhost:5000", description="MLflow tracking server URI"
     )
-    run_id: str = Field(description="MLflow run ID to analyze")
+    run_id: Optional[str] = Field(default=None,description="MLflow run ID to analyze")
     download_dir: str = Field(
         default="mlflow_downloads",
         description="Local directory for downloading artifacts",
@@ -33,12 +33,6 @@ class MLflowConfig(BaseModel):
                 "tracking_uri must start with http://, https://, or file://"
             )
         return v
-
-    @field_validator("run_id")
-    def validate_run_id(cls, v):
-        if not v or len(v.strip()) == 0:
-            raise ValueError("run_id cannot be empty")
-        return v.strip()
 
 
 class ArtifactConfig(BaseModel):
@@ -62,17 +56,10 @@ class ArtifactConfig(BaseModel):
     )
 
 
-class QueryConfig(BaseModel):
+class PromptConfig(BaseModel):
     """Configuration for query generation."""
-
-    context: Optional[Dict[str, Any]] = Field(
-        default=None, description="Additional context for query generation"
-    )
     custom_instructions: Optional[str] = Field(
-        default=None, description="Custom instructions to append to generated prompts"
-    )
-    prompt_builders: Optional[Dict[str, Any]] = Field(
-        default=None, description="Configuration for custom prompt builders"
+        default=None, description="Custom instructions to append to created prompts"
     )
 
 
@@ -80,7 +67,7 @@ class OutputConfig(BaseModel):
     """Configuration for output management."""
 
     save_prompt: bool = Field(
-        default=True, description="Whether to save generated prompts"
+        default=False, description="Whether to save generated prompts"
     )
     save_response: bool = Field(
         default=True, description="Whether to save AI responses"
@@ -89,7 +76,6 @@ class OutputConfig(BaseModel):
         default="advisor_output", description="Directory to save outputs"
     )
     format: str = Field(default="txt", description="Output format (txt, json, yaml)")
-    verbose: bool = Field(default=True, description="Whether to enable verbose logging")
 
     @field_validator("format")
     def validate_format(cls, v):

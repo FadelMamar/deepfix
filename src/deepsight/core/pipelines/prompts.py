@@ -1,10 +1,11 @@
 from typing import List,Union,Optional,Dict,Any
 from .base import Step
-from ..query import PromptBuilder
+from ..artifacts import PromptBuilder
+from ..config import PromptConfig
 
-class PromptBuilder(Step):
-    def __init__(self):
-        self.builder = PromptBuilder()
+class BuildPrompt(Step):
+    def __init__(self, config:Optional[PromptConfig]=None):
+        self.builder = PromptBuilder(config=config)
     
     def run(
         self,

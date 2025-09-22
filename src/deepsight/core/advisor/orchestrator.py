@@ -13,23 +13,17 @@ from pydantic import BaseModel, Field
 import yaml
 
 from ...integrations.mlflow import MLflowManager
-from ..artifacts import (
-    DeepchecksArtifacts,
-    TrainingArtifacts,
-    ArtifactsManager
-)
 
-from ..query import PromptBuilder,IntelligenceClient,IntelligenceConfig
+from ..query import IntelligenceClient,IntelligenceConfig
 from ...utils.logging import get_logger
 
-from ..config import QueryConfig, OutputConfig,MLflowConfig,ArtifactConfig
+from ..config import PromptConfig, OutputConfig,MLflowConfig,ArtifactConfig
 from ..pipelines.base import Pipeline
 from ..pipelines.artifacts import LoadTrainingArtifact,LoadDeepchecksArtifacts
+from ..pipelines.prompts import BuildPrompt
 from .result import AdvisorResult
 from .errors import (
     ConfigurationError,
-    ArtifactError,
-    QueryError,
     OutputError,
     IntelligenceError,
 )
@@ -41,8 +35,8 @@ class AdvisorConfig(BaseModel):
     artifacts: ArtifactConfig = Field(
         default_factory=ArtifactConfig, description="Artifact management configuration"
     )
-    query: QueryConfig = Field(
-        default_factory=QueryConfig, description="Query generation configuration"
+    prompt: PromptConfig = Field(
+        default_factory=PromptConfig, description="Query generation configuration"
     )
     intelligence: IntelligenceConfig = Field(
         default_factory=IntelligenceConfig,
@@ -146,7 +140,7 @@ class DeepSightAdvisor:
 
     This class coordinates the complete workflow:
     1. Artifact loading and management
-    2. Query generation from artifacts
+    2. Prompt building from artifacts
     3. Intelligent analysis execution
     4. Result formatting and output
     """
@@ -168,87 +162,73 @@ class DeepSightAdvisor:
         except Exception as e:
             raise ConfigurationError(f"Failed to load configuration: {e}")
 
-        # Initialize components
-        self._initialize_components()
+        # Initialize intelligence client
+        self.intelligence_client = IntelligenceClient(self.config.intelligence)
 
-        self.logger.info("DeepSight Advisor initialized successfully")
+    def initialize_preprocessing_pipeline(self,run_id: str)->Pipeline:
+        steps = []
 
-    def _initialize_components(self) -> None:
-        """Initialize all required components."""
+        if not isinstance(run_id,str):
+            raise ConfigurationError(f"run_id provided is not of type str, type: {type(run_id)}")
+
         try:
             # Initialize MLflow manager
-            self.mlflow_manager = MLflowManager(
+            mlflow_manager = MLflowManager(
                 tracking_uri=self.config.mlflow.tracking_uri,
-                run_id=self.config.mlflow.run_id,
+                run_id= run_id,
                 dwnd_dir=self.config.mlflow.download_dir,
             )
             self.logger.info(
-                f"MLflow manager initialized: {self.config.mlflow.tracking_uri}"
+                f"MLflow manager initialized: {self.config.mlflow.tracking_uri}, run_id={self.config.mlflow.run_id}"
             )
-
-            # Initialize artifacts loaders
-            cfg = dict(mlflow_manager=self.mlflow_manager,artifact_sqlite_path=self.config.artifacts.sqlite_path)
-            steps = []
+            
+            # step 1: load artifacts
+            cfg = dict(mlflow_manager=mlflow_manager,artifact_sqlite_path=self.config.artifacts.sqlite_path)
             if self.config.artifacts.load_training:
                 steps.append(LoadTrainingArtifact(**cfg))
             if self.config.artifacts.load_checks:
-                steps.append(LoadDeepchecksArtifacts(**cfg))
-            self.artifacts_pipeline = Pipeline(steps=steps)
-            self.logger.info("Artifact manager initialized")
+                steps.append(LoadDeepchecksArtifacts(**cfg))            
+            self.logger.info("Artifacts loaders initialized")
 
-            # Initialize query generator
-            self.query_generator = PromptBuilder()
+            # step 2: build prompt
+            steps.append(BuildPrompt(self.config.prompt))
             self.logger.info("Query generator initialized")
 
-            # Initialize intelligence client
-            self.intelligence_client = IntelligenceClient(self.config.intelligence)
-            self.logger.info("Intelligence client initialized")
+        except Exception:
+            raise ConfigurationError(f"Failed to initialize preprocessing pipeline: {traceback.format_exc()}")
 
-        except Exception as e:
-            raise ConfigurationError(f"Failed to initialize components: {e}")
+        return Pipeline(steps=steps)
 
-    def run_analysis(self, run_id: Optional[str] = None) -> AdvisorResult:
+    def run_analysis(self, run_id: str) -> Union[AdvisorResult,None]:
         """
         Run complete analysis pipeline for given run_id.
 
         Args:
-            run_id: Optional run ID to override config
+            run_id: mlflow run ID
 
         Returns:
             AdvisorResult containing all analysis information
         """
+        # Initialize components
+        load_and_transform = self.initialize_preprocessing_pipeline(run_id=run_id)
+
         start_time = time.time()
-
-        # Use provided run_id or config run_id
-        analysis_run_id = run_id or self.config.mlflow.run_id
-        if not analysis_run_id:
-            raise ConfigurationError("No run_id provided in config or parameter")
-
         # Initialize result object
-        result = AdvisorResult(run_id=analysis_run_id)
+        result = AdvisorResult(run_id=run_id)
 
         try:
-            self.logger.info(f"Starting analysis for run_id: {analysis_run_id}")
+            self.logger.info(f"Starting analysis for run_id: {run_id}")
 
-            # Step 1: Load artifacts
-            self.logger.info("Step 1: Loading artifacts...")
-            artifacts = self.load_artifacts(analysis_run_id, result)
+            # Step 1: Load artifacts data as a prompt
+            self.logger.info("Step 1: artifacts -> prompt...")
+            context = load_and_transform.run()
 
-            # Step 2: Generate query
-            self.logger.info("Step 2: Generating query...")
-            prompt = self.generate_query(artifacts, result)
-
-            # Step 3: Execute query (if auto_execute is enabled)
-            if self.config.intelligence.auto_execute:
-                self.logger.info("Step 3: Executing intelligence query...")
-                self.execute_query(prompt, result)
-            else:
-                self.logger.info(
-                    "Step 3: Skipping query execution (auto_execute=False)"
-                )
+            # Step 2: Execute query
+            self.logger.info("Step 2: Executing intelligence query...")
+            self.execute_query(context['prompt'], result)
 
             # Step 4: Save results
-            self.logger.info("Step 4: Saving results...")
+            self.logger.info("Step 3: Saving results...")
             self.save_results(result)
 
             # Calculate total execution time
@@ -261,75 +241,8 @@ class DeepSightAdvisor:
 
         except Exception as e:
             result.execution_time = time.time() - start_time
-            result.set_error(str(e))
-            self.logger.error(f"Analysis failed: {e}")
-            raise
-
-    def load_artifacts(
-        self, run_id: str, result: AdvisorResult
-    ) -> List[Union[DeepchecksArtifacts, TrainingArtifacts]]:
-        """
-        Load and return artifacts for the given run_id.
-
-        Args:
-            run_id: MLflow run ID
-            result: Result object to update with loading information
-
-        Returns:
-            List of loaded artifacts
-        """
-        start_time = time.time()
-        try:
-            context = self.artifacts_pipeline.run()
-            artifacts = [v for v in context.values() if v is not None]        
-            self.logger.info(
-                f"Artifact loading completed in {result.artifact_loading_time:.2f} seconds"
-            )
-            return artifacts
-        except Exception as e:
-            result.artifact_loading_time = time.time() - start_time
-            raise ArtifactError(f"Artifact loading failed: {e}", run_id=run_id)
-
-    def generate_query(
-        self,
-        artifacts: List[Union[DeepchecksArtifacts, TrainingArtifacts]],
-        result: AdvisorResult,
-    ) -> str:
-        """
-        Generate intelligent query from artifacts.
-
-        Args:
-            artifacts: List of loaded artifacts
-            result: Result object to update with query information
-
-        Returns:
-            Generated prompt string
-        """
-        start_time = time.time()
-
-        try:
-            # Prepare context
-            context = self.config.query.context or {}
-            if self.config.query.custom_instructions:
-                context["custom_instructions"] = self.config.query.custom_instructions
-
-            # Generate prompt
-            prompt = self.query_generator.build_prompt(artifacts, context)
-
-            # Update result
-            result.set_prompt(prompt)
-            result.query_generation_time = time.time() - start_time
-
-            self.logger.info(
-                f"Query generated successfully in {result.query_generation_time:.2f} seconds"
-            )
-            self.logger.info(f"Prompt length: {result.prompt_length} characters")
-
-            return prompt
-
-        except Exception as e:
-            result.query_generation_time = time.time() - start_time
-            raise QueryError(f"Query generation failed: {e}")
+            self.logger.error(f"Analysis failed: {traceback.format_exc()}")
+            return None
 
     def execute_query(self, prompt: str, result: AdvisorResult) -> None:
         """
@@ -344,14 +257,6 @@ class DeepSightAdvisor:
         try:
             # Prepare execution context
             context = self.config.intelligence.context or {}
-            context.update(
-                {
-                    "run_id": result.run_id,
-                    "artifacts_loaded": result.artifacts_loaded,
-                    "prompt_length": result.prompt_length,
-                }
-            )
-
             # Execute query
             response = self.intelligence_client.execute_query(
                 prompt=prompt,
@@ -360,14 +265,15 @@ class DeepSightAdvisor:
 
             # Update result
             result.set_response(response)
+            result.set_prompt(prompt)
             result.intelligence_execution_time = time.time() - start_time
 
             self.logger.info(
                 f"Query executed successfully in {result.intelligence_execution_time:.2f} seconds"
             )
-            self.logger.info(f"Response length: {result.response_length} characters")
+            self.logger.debug(f"Response length: {result.response_length} characters")
 
-        except Exception as e:
+        except Exception:
             result.intelligence_execution_time = time.time() - start_time
             raise IntelligenceError(f"Query execution failed: {traceback.format_exc()}")
 
@@ -391,7 +297,6 @@ class DeepSightAdvisor:
                 prompt_path = output_dir / f"{base_filename}_prompt.txt"
                 with open(prompt_path, "w") as f:
                     f.write(result.prompt_generated)
-                result.add_output_path("prompt", prompt_path)
                 self.logger.info(f"Prompt saved to: {prompt_path}")
 
             # Save response if requested
@@ -399,7 +304,6 @@ class DeepSightAdvisor:
                 response_path = output_dir / f"{base_filename}_response.txt"
                 with open(response_path, "w") as f:
                     f.write(result.response_content)
-                result.add_output_path("response", response_path)
                 self.logger.info(f"Response saved to: {response_path}")
 
             # Save result in configured format
@@ -415,20 +319,8 @@ class DeepSightAdvisor:
 
             self.logger.info(f"Results saved to: {result_path}")
 
-        except Exception as e:
-            raise OutputError(f"Failed to save results: {e}")
-
-    def get_summary(self, result: AdvisorResult) -> Dict[str, Any]:
-        """
-        Get a summary of the analysis results.
-
-        Args:
-            result: Analysis result object
-
-        Returns:
-            Summary dictionary
-        """
-        return result.get_summary()
+        except Exception:
+            raise OutputError(f"Failed to save results: {traceback.format_exc()}")
 
     def validate_configuration(self) -> None:
         """Validate the current configuration."""

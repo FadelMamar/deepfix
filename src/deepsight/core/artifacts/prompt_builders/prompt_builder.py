@@ -8,6 +8,7 @@ import traceback
 from ....utils.logging import get_logger
 from ....utils.exceptions import PromptBuilderError
 from ..datamodel import DeepchecksArtifacts, TrainingArtifacts
+from ...config import PromptConfig
 from . import DeepchecksPromptBuilder, TrainingPromptBuilder
 
 
@@ -15,7 +16,7 @@ class PromptBuilder:
     """Main class for orchestrating prompt creation from existing Pydantic models."""
 
     def __init__(
-        self,
+        self,config: Optional[PromptConfig] = None
     ):
         """Initialize the PromptBuilder.
 
@@ -25,6 +26,7 @@ class PromptBuilder:
         """
         self.logger = get_logger(__name__)
         self.prompt_builders = self._initialize_prompt_builders()
+        self.config: Optional[PromptConfig] = config
 
         self.logger.info("PromptBuilder initialized successfully")
 
@@ -70,7 +72,11 @@ class PromptBuilder:
                 )
 
             # Combine all prompts
-            full_prompt = "\n\n".join(prompt_parts) + "\n\n" + self._get_instruction()
+            custom_instructions = getattr(self.config, 'custom_instructions') or ""
+            prompt_parts.append(custom_instructions)
+            full_prompt = ("\n\n".join(prompt_parts) 
+                           + "\n".join(self.instructions)
+                        )
 
             return full_prompt
 
@@ -79,18 +85,26 @@ class PromptBuilder:
                 "unknown",
                 f"Unexpected error during prompt building: {traceback.format_exc()}",
             )
-
-    def _get_instruction(self) -> str:
-        return """ONLY ANSWER BASED ON THE PROVIDED INFORMATION. DO NOT MAKE UP ANYTHING or READ ANY OTHER FILES.
-                 DO NOT CREATE ANY NEW FILES OR DIRECTORIES.
-                 DO NOT EDIT ANY FILES.
-                 DO NOT DELETE ANY FILES.
-                 DO NOT RENAME ANY FILES.
-                 DO NOT MOVE ANY FILES.
-                 DO NOT COPY ANY FILES.
-                 DO NOT PASTE ANY FILES.
-                 ANSWER IN PLAIN TEXT.              
-        """
+    @property
+    def instructions(self) -> List[str]:
+        """Get query-specific instructions based on query type."""
+        base_instructions = [
+            "Please provide, If applicable:",
+            "1. Analysis of training performance",
+            "2. Overfitting assessment and recommendations",
+            "3. Suggested hyperparameter adjustments",
+            "4. Next steps for model improvement",
+            "5. Specific overfitting indicators and their severity",
+            "6. Regularization techniques to implement",
+            "7. Data augmentation recommendations",
+            "8. Performance bottleneck identification",
+            "9. Model architecture optimization suggestions",
+            "10. Training strategy improvements",
+            "11. Hyperparameter sensitivity analysis",
+            "12. Learning rate schedule recommendations",
+            "13. Batch size and optimizer suggestions",
+            ]
+        return base_instructions
 
     def _get_prompt_builder(
         self, artifact_type: str

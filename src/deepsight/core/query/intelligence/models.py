@@ -83,9 +83,6 @@ class IntelligenceConfig(BaseModel):
     provider_name: IntelligenceProviders = Field(
         default=..., description="Specific provider name: llm, cursor, etc."
     )
-    auto_execute: bool = Field(
-        default=True, description="Whether to automatically execute queries"
-    )
     context: Optional[Dict[str, Any]] = Field(
         default=None, description="Additional context for query execution"
     )
