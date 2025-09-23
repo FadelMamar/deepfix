@@ -14,35 +14,37 @@ from .services import ChecksumService
 from .datamodel import (
     ArtifactRecord,
     ArtifactStatus,
-    ArtifactPaths,
+    ArtifactPath,
     DeepchecksArtifacts,
     TrainingArtifacts,
+    DatasetArtifacts,
 )
-from ...integrations.mlflow import MLflowManager
-from ...integrations import DeepchecksConfig
+from ..config import DeepchecksConfig
+#from ...integrations import MLflowManager
 
 
 class ArtifactsManager:
     def __init__(
         self,
         sqlite_path: str,
-        mlflow_manager: MLflowManager,
+        mlflow_manager#: MLflowManager,
     ) -> None:
+        from ...integrations import MLflowManager
         self.repo = ArtifactRepository(sqlite_path)
         self.checksum = ChecksumService()
-        self.mlflow = mlflow_manager
+        self.mlflow:MLflowManager = mlflow_manager
 
     def register_artifact(
         self,
         run_id: str,
-        artifact_key: Union[str, ArtifactPaths],
+        artifact_key: Union[str, ArtifactPath],
         local_path: Optional[str] = None,
         source_uri: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         tags: Optional[Dict[str, Any]] = None,
     ) -> ArtifactRecord:
         artifact_key = (
-            ArtifactPaths(artifact_key)
+            ArtifactPath(artifact_key)
             if isinstance(artifact_key, str)
             else artifact_key
         )
@@ -108,11 +110,11 @@ class ArtifactsManager:
     def get_local_path(
         self,
         run_id: str,
-        artifact_key: Union[str, ArtifactPaths],
+        artifact_key: Union[str, ArtifactPath],
         download_if_missing: bool = True,
     ) -> Optional[Path]:
         artifact_key = (
-            ArtifactPaths(artifact_key)
+            ArtifactPath(artifact_key)
             if isinstance(artifact_key, str)
             else artifact_key
         )
@@ -128,27 +130,29 @@ class ArtifactsManager:
     def load_artifact(
         self,
         run_id: str,
-        artifact_key: Union[str, ArtifactPaths],
+        artifact_key: Union[str, ArtifactPath],
         download_if_missing: bool = True,
     ) -> Union[DeepchecksArtifacts, TrainingArtifacts, str]:
         artifact_key = (
-            ArtifactPaths(artifact_key)
+            ArtifactPath(artifact_key)
             if isinstance(artifact_key, str)
             else artifact_key
         )
         path = self.get_local_path(run_id, artifact_key.value, download_if_missing)
-        if artifact_key == ArtifactPaths.DEEPCHECKS:
+        if artifact_key == ArtifactPath.DEEPCHECKS:
             return self._load_deepchecks_artifacts(path)
-        elif artifact_key == ArtifactPaths.TRAINING:
+        elif artifact_key == ArtifactPath.TRAINING:
             return self._load_training_artifacts(path)
-        elif artifact_key == ArtifactPaths.MODEL_CHECKPOINT:
+        elif artifact_key == ArtifactPath.MODEL_CHECKPOINT:
             return self._load_model_checkpoint(path)
+        elif artifact_key == ArtifactPath.DATASET:
+            return self._load_dataset_artifacts(path)
         else:
             raise ValueError(f"Artifact key {artifact_key} not supported")
 
     def _load_training_artifacts(self, local_path: str) -> TrainingArtifacts:
-        metrics = os.path.join(local_path, ArtifactPaths.TRAINING_METRICS.value)
-        params = os.path.join(local_path, ArtifactPaths.TRAINING_PARAMS.value)
+        metrics = os.path.join(local_path, ArtifactPath.TRAINING_METRICS.value)
+        params = os.path.join(local_path, ArtifactPath.TRAINING_PARAMS.value)
         if not os.path.exists(params):
             return self.mlflow.get_training_artifacts()
         with open(params, "r") as f:
@@ -160,16 +164,16 @@ class ArtifactsManager:
         )
 
     def _load_deepchecks_artifacts(self, local_path: str) -> DeepchecksArtifacts:
-        artifacts = os.path.join(local_path, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
+        artifacts = os.path.join(local_path, ArtifactPath.DEEPCHECKS_ARTIFACTS.value)
         artifacts = DeepchecksArtifacts.from_file(artifacts)
         if artifacts.config is None:
-            config = os.path.join(local_path, ArtifactPaths.DEEPCHECKS_CONFIG.value)
+            config = os.path.join(local_path, ArtifactPath.DEEPCHECKS_CONFIG.value)
             config = DeepchecksConfig.from_file(config)
             artifacts.config = config
         return artifacts
 
     def _load_model_checkpoint(self, local_path: str) -> str:
-        best_checkpoint = os.path.join(local_path, ArtifactPaths.MODEL_CHECKPOINT.value)
+        best_checkpoint = os.path.join(local_path, ArtifactPath.MODEL_CHECKPOINT.value)
         artifacts = list(Path(best_checkpoint).iterdir())
         assert len(artifacts) == 1, (
             "There should be only one artifact in the best checkpoint"
@@ -178,6 +182,11 @@ class ArtifactsManager:
             "The artifact should be a file, but got a directory."
         )
         return str(artifacts[0])
+    
+    def _load_dataset_artifacts(self, local_path: str) -> DatasetArtifacts:
+        artifacts = os.path.join(local_path, ArtifactPath.DATASET_METADATA.value)
+        artifacts = DatasetArtifacts.from_file(artifacts)
+        return artifacts
 
     def list_artifacts(
         self,

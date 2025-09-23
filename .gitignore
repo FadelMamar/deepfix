@@ -221,6 +221,8 @@ cython_debug/
 # MLflow
 mlruns/
 mlflow.db
+mlflow_data/
+mlflow_downloads/
 
 /data/
 /checkpoints/

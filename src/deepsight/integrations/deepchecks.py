@@ -171,7 +171,7 @@ class DeepchecksRunner:
             )
             output["model_evaluation"] = self.parser.run(out_model_evaluation)
 
-        artifact = DeepchecksArtifacts(dataset_name=dataset_name, results=output)
+        artifact = DeepchecksArtifacts(dataset_name=dataset_name, results=output,config=self.config)
 
         if self.config.save_results:
             self._save_artifact(artifact=artifact, dataset_name=dataset_name)

@@ -9,17 +9,28 @@ from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 from pydantic import BaseModel, Field, field_validator
 from omegaconf import DictConfig, OmegaConf
+from enum import StrEnum
 
+class DefaultPaths(StrEnum):
+    MLFLOW_TRACKING_URI = "file:./deepfix_mlflow"
+    MLFLOW_DOWNLOADS = "mlflow_downloads"
+
+    DATASETS_EXPERIMENT_NAME = "deepfix_datasets"
+
+    ARTIFACTS = "tmp/artifacts.db"
+    
+    ADVISOR_OUTPUT_DIR = "advisor_output"
+    
 
 class MLflowConfig(BaseModel):
     """Configuration for MLflow integration."""
 
     tracking_uri: str = Field(
-        default="http://localhost:5000", description="MLflow tracking server URI"
+        default=DefaultPaths.MLFLOW_TRACKING_URI.value, description="MLflow tracking server URI"
     )
     run_id: Optional[str] = Field(default=None,description="MLflow run ID to analyze")
     download_dir: str = Field(
-        default="mlflow_downloads",
+        default=DefaultPaths.MLFLOW_DOWNLOADS.value,
         description="Local directory for downloading artifacts",
     )
     experiment_name: Optional[str] = Field(
@@ -28,7 +39,7 @@ class MLflowConfig(BaseModel):
 
     @field_validator("tracking_uri")
     def validate_tracking_uri(cls, v):
-        if not v.startswith(("http://", "https://", "file://","sqlite://")):
+        if not v.startswith(("http://", "https://", "file://",)):
             raise ValueError(
                 "tracking_uri must start with http://, https://, or file://"
             )
@@ -51,7 +62,7 @@ class ArtifactConfig(BaseModel):
         default=True, description="Whether to enable local caching"
     )
     sqlite_path: str = Field(
-        default="tmp/artifacts.db",
+        default=DefaultPaths.ARTIFACTS.value,
         description="Path to SQLite database for artifact caching",
     )
 
@@ -73,7 +84,7 @@ class OutputConfig(BaseModel):
         default=True, description="Whether to save AI responses"
     )
     output_dir: str = Field(
-        default="advisor_output", description="Directory to save outputs"
+        default=DefaultPaths.ADVISOR_OUTPUT_DIR.value, description="Directory to save outputs"
     )
     format: str = Field(default="txt", description="Output format (txt, json, yaml)")
 
@@ -104,10 +115,6 @@ class DeepchecksConfig(BaseModel):
     save_results: bool = Field(default=False, description="Whether to save the results")
     output_dir: Optional[str] = Field(
         default=None, description="Output directory to save the results"
-    )
-    save_display: bool = Field(default=False, description="Whether to save the display")
-    parse_results: bool = Field(
-        default=False, description="Whether to parse the results"
     )
     batch_size: int = Field(default=16, description="Batch size to use for the suites")
 

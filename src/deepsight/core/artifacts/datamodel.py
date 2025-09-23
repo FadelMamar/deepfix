@@ -23,7 +23,7 @@ import yaml
 from ..config import DeepchecksConfig
 
 
-class ArtifactPaths(Enum):
+class ArtifactPath(str,Enum):
     # training artifacts
     TRAINING = "training_artifacts"
     TRAINING_METRICS = "metrics.csv"
@@ -33,7 +33,9 @@ class ArtifactPaths(Enum):
     DEEPCHECKS = "deepchecks"
     DEEPCHECKS_CONFIG = "config.yaml"
     DEEPCHECKS_ARTIFACTS = "artifacts.yaml"
-
+    # dataset artifacts
+    DATASET = "dataset"
+    DATASET_METADATA = "metadata.yaml"
 
 ## Deepchecks
 class DeepchecksResultHeaders(Enum):
@@ -123,7 +125,7 @@ class DeepchecksArtifacts(BaseModel):
         file_path = (
             file_path
             if (file_path is not None)
-            else os.path.join(dir_path, ArtifactPaths.DEEPCHECKS_ARTIFACTS.value)
+            else os.path.join(dir_path, ArtifactPath.DEEPCHECKS_ARTIFACTS.value)
         )
         with open(file_path, "r") as f:
             d = yaml.safe_load(f)
@@ -131,7 +133,7 @@ class DeepchecksArtifacts(BaseModel):
         artifacts = cls.from_dict(d)
         if dir_path is not None:
             artifacts.config = DeepchecksConfig.from_file(
-                os.path.join(dir_path, ArtifactPaths.DEEPCHECKS_CONFIG.value)
+                os.path.join(dir_path, ArtifactPath.DEEPCHECKS_CONFIG.value)
             )
 
         return artifacts
@@ -161,30 +163,20 @@ class TrainingArtifacts(BaseModel):
     def from_file(cls, metrics_path: str) -> "TrainingArtifacts":
         return cls(metrics_path=metrics_path, metrics_values=pd.read_csv(metrics_path))
 
+# Dataset
+class DatasetArtifacts(BaseModel):
+    dataset_name: str = Field(...,description="Name of the dataset")
+    statistics: Optional[Dict[str, Any]] = Field(default=None,description="Statistics of the dataset")
 
-## Dataset
-class ClassificationDataElement(BaseModel):
-    index: int = Field(description="Index of the data element")
-    embedding: List[float] = Field(description="Embedding of the data element")
-    label: int = Field(description="Label of the data element")
-    prediction: Optional[int] = Field(
-        default=None, description="Prediction of the data element"
-    )
-    probabilities: Optional[List[float]] = Field(
-        default=None, description="Probabilities of the data element"
-    )
+    def to_dict(self) -> Dict[str, Any]:
+        dumped_dict = self.model_dump()
+        return dumped_dict
 
-
-class ClassificationDataset(BaseModel):
-    dataset_name: str = Field(description="Name of the dataset")
-    data: List[ClassificationDataElement] = Field(description="Data of the dataset")
-    embedding_model: Optional[str] = Field(
-        default=None,
-        description="Name of the embedding model used to generate the embeddings",
-    )
-    embedding_model_params: Optional[Dict[str, Any]] = Field(
-        default=None, description="Params of the embedding model"
-    )
+    @classmethod
+    def from_file(cls, path: str) -> "DatasetArtifacts":
+        with open(path, "r") as f:
+            d = yaml.safe_load(f)
+        return cls(dataset_name=d["dataset_name"], statistics=d["statistics"])
 
 
 # SQLModel

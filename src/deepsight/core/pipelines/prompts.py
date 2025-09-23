@@ -12,6 +12,7 @@ class BuildPrompt(Step):
         context:dict,
         artifacts:Optional[List]=None,
         query_context:Optional[Dict[str, Any]]=None,
+        **kwargs
     ) -> dict:        
         prompt = self.builder.build_prompt(artifacts=artifacts or context.get("artifacts"),context=query_context)
         context['prompt'] = prompt

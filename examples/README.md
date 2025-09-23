@@ -89,7 +89,7 @@ python examples/run_artifact_manager.py
 **Key Components**:
 - `ArtifactsManager`: Main artifact management interface
 - `MLflowManager`: MLflow integration
-- `ArtifactPaths`: Standard artifact path definitions
+- `ArtifactPath`: Standard artifact path definitions
 
 ### 4. Query Generation Example (`build_prompts.py`)
 

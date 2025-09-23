@@ -5,7 +5,7 @@ from .datamodel import (
     DeepchecksResultHeaders,
     DeepchecksParsedResult,
     TrainingArtifacts,
-    ArtifactPaths,
+    ArtifactPath,
 )
 from .manager import ArtifactsManager
 from .repository import ArtifactRepository
@@ -19,7 +19,7 @@ __all__ = [
     "DeepchecksResultHeaders",
     "DeepchecksParsedResult",
     "TrainingArtifacts",
-    "ArtifactPaths",
+    "ArtifactPath",
     "ArtifactsManager",
     "ArtifactRepository",
     "ChecksumService",

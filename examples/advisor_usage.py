@@ -63,8 +63,7 @@ def example_2(env_file:str):
         ),
         output=OutputConfig(output_dir="advisor_output", 
                             save_prompt=True, 
-                            save_text=True,
-                            save_response=False,
+                            save_response=True,
                             format="txt"
                         ),
     )
