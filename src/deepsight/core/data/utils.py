@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset
 import torch
 from typing import Optional, Union,List,Dict
+from tqdm import tqdm
 
 class DataStatistics:
     def __init__(self,
@@ -54,36 +55,43 @@ class DataStatistics:
         
         num_channels = first_image.shape[0]  # C dimension
         
-        # Initialize accumulators for mean and variance computation
-        sum_pixels = torch.zeros(num_channels)
-        sum_squared_pixels = torch.zeros(num_channels)
-        total_pixels = 0
+        # Initialize accumulators for mean and variance computation (use float64 for stability)
+        sum_pixels = torch.zeros(num_channels, dtype=torch.float64)
+        sum_squared_pixels = torch.zeros(num_channels, dtype=torch.float64)
+        count = 0
         
-        # Iterate through all samples in the dataset
-        for sample in dataset:
+        # Compute mean
+        for sample in tqdm(dataset,desc="Computing dataset statistics"):
             if isinstance(sample, tuple):
                 image = sample[0]
             else:
                 image = sample
                 
-            # Ensure image is a tensor
+            # Ensure image is a tensor and floating type
             if not isinstance(image, torch.Tensor):
                 image = torch.tensor(image)
+            # Cast to float32 and normalize if in 0-255 range
+            if image.dtype.is_floating_point:
+                image = image.to(torch.float32)
+            else:
+                image = image.to(torch.float32)
+                # Heuristic: if values look like 0-255, scale to 0-1
+                if torch.max(image) > 1.0 and torch.min(image) >= 0.0:
+                    image = image / 255.0
             
             # Flatten spatial dimensions (H, W) and keep channel dimension
             image_flat = image.view(num_channels, -1)  # Shape: (C, H*W)
             
             # Accumulate sums
-            sum_pixels += image_flat.sum(dim=1)  # Sum over spatial dimensions
-            sum_squared_pixels += (image_flat ** 2).sum(dim=1)
-            total_pixels += image_flat.shape[1]  # H*W
-        
+            sum_pixels += image_flat.sum(dim=1).to(torch.float64)  # Sum over spatial dimensions
+            count += image_flat.shape[1]  # H*W
+            sum_squared_pixels += (image_flat ** 2).sum(dim=1).to(torch.float64)
+                
         # Compute mean and standard deviation
-        mean = sum_pixels / total_pixels
+        mean = sum_pixels / count
         
         # Compute variance using the formula: Var(X) = E[X^2] - E[X]^2
-        mean_squared = (sum_squared_pixels / total_pixels)
-        variance = mean_squared - (mean ** 2)
+        variance = (sum_squared_pixels / count) - (mean ** 2)
         std = torch.sqrt(variance)
         
         return {

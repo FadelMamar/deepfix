@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 import os
+import tempfile
 import shutil
 from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 import yaml
-import traceback
-
+from omegaconf import OmegaConf
 from .repository import ArtifactRepository
 from .services import ChecksumService
 from .datamodel import (
@@ -18,18 +18,21 @@ from .datamodel import (
     DeepchecksArtifacts,
     TrainingArtifacts,
     DatasetArtifacts,
+    Artifacts,
+    ModelCheckpointArtifacts,
 )
-from ..config import DeepchecksConfig
-#from ...integrations import MLflowManager
+from ...utils.logging import get_logger
 
+LOGGER = get_logger(__name__)
 
 class ArtifactsManager:
     def __init__(
         self,
-        sqlite_path: str,
-        mlflow_manager#: MLflowManager,
+        mlflow_manager,
+        sqlite_path: str,        
     ) -> None:
         from ...integrations import MLflowManager
+
         self.repo = ArtifactRepository(sqlite_path)
         self.checksum = ChecksumService()
         self.mlflow:MLflowManager = mlflow_manager
@@ -42,12 +45,19 @@ class ArtifactsManager:
         source_uri: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         tags: Optional[Dict[str, Any]] = None,
+        add_to_mlflow: bool = False,
+        artifacts: Optional[Artifacts] = None,
     ) -> ArtifactRecord:
         artifact_key = (
             ArtifactPath(artifact_key)
             if isinstance(artifact_key, str)
             else artifact_key
         )
+        # check if artifact already registered
+        rec = self.repo.get(run_id, artifact_key.value)
+        if isinstance(rec, ArtifactRecord):
+            raise ValueError(f"Artifact {artifact_key.value} already registered for run {run_id}")
+        # create record
         record = ArtifactRecord(
             run_id=run_id,
             mlflow_run_id=self.mlflow.run_id,
@@ -58,10 +68,19 @@ class ArtifactsManager:
             metadata_json=metadata,
             tags_json=tags,
         )
+        if add_to_mlflow:
+            if artifacts:
+                with tempfile.TemporaryDirectory() as tmp:
+                    path = os.path.join(tmp, Path(artifact_key.value).with_suffix(".yaml"))
+                    OmegaConf.save(artifacts.to_dict(), path)
+                    self.mlflow.add_artifact(artifact_key.value, path)
+            else:
+                assert (local_path is not None) and os.path.exists(local_path), "local_path must be provided if artifacts is not provided"
+                self.mlflow.add_artifact(artifact_key.value, local_path)
         return self.repo.upsert(record)
 
-    def ensure_downloaded(self, run_id: str, artifact_key: str) -> Path:
-        local_path = self.mlflow.get_local_path(artifact_key, download_if_missing=False)
+    def ensure_downloaded(self, run_id: str, artifact_key: str,mlflow_run_id:Optional[str]=None) -> Path:
+        local_path = self.mlflow.get_local_path(artifact_key,run_id=mlflow_run_id, download_if_missing=False)
 
         rec = self.repo.get(run_id, artifact_key)
         if rec and rec.local_path and Path(rec.local_path).exists():
@@ -69,7 +88,7 @@ class ArtifactsManager:
             return Path(rec.local_path)
 
         downloaded_dir = self.mlflow.get_local_path(
-            artifact_key, download_if_missing=True
+            artifact_key, download_if_missing=True,run_id=mlflow_run_id
         )
         candidate = Path(downloaded_dir)
         final_path = candidate if candidate.is_file() else local_path
@@ -106,7 +125,7 @@ class ArtifactsManager:
             self.repo.upsert(existing)
 
         return final_path
-
+        
     def get_local_path(
         self,
         run_id: str,
@@ -124,7 +143,7 @@ class ArtifactsManager:
             self.repo.touch_access(run_id, artifact_key)
             return Path(rec.local_path)
         if download_if_missing:
-            return self.ensure_downloaded(run_id, artifact_key)
+            return self.ensure_downloaded(run_id=run_id,mlflow_run_id=rec.mlflow_run_id, artifact_key=artifact_key)
         return None
 
     def load_artifact(
@@ -132,7 +151,7 @@ class ArtifactsManager:
         run_id: str,
         artifact_key: Union[str, ArtifactPath],
         download_if_missing: bool = True,
-    ) -> Union[DeepchecksArtifacts, TrainingArtifacts, str]:
+    ) -> Artifacts:
         artifact_key = (
             ArtifactPath(artifact_key)
             if isinstance(artifact_key, str)
@@ -164,15 +183,11 @@ class ArtifactsManager:
         )
 
     def _load_deepchecks_artifacts(self, local_path: str) -> DeepchecksArtifacts:
-        artifacts = os.path.join(local_path, ArtifactPath.DEEPCHECKS_ARTIFACTS.value)
+        artifacts = os.path.join(local_path, Path(ArtifactPath.DEEPCHECKS.value).with_suffix(".yaml"))
         artifacts = DeepchecksArtifacts.from_file(artifacts)
-        if artifacts.config is None:
-            config = os.path.join(local_path, ArtifactPath.DEEPCHECKS_CONFIG.value)
-            config = DeepchecksConfig.from_file(config)
-            artifacts.config = config
         return artifacts
 
-    def _load_model_checkpoint(self, local_path: str) -> str:
+    def _load_model_checkpoint(self, local_path: str) -> ModelCheckpointArtifacts:
         best_checkpoint = os.path.join(local_path, ArtifactPath.MODEL_CHECKPOINT.value)
         artifacts = list(Path(best_checkpoint).iterdir())
         assert len(artifacts) == 1, (
@@ -181,10 +196,10 @@ class ArtifactsManager:
         assert artifacts[0].is_file(), (
             "The artifact should be a file, but got a directory."
         )
-        return str(artifacts[0])
+        return ModelCheckpointArtifacts(model_path=str(artifacts[0]), model_config=None)
     
     def _load_dataset_artifacts(self, local_path: str) -> DatasetArtifacts:
-        artifacts = os.path.join(local_path, ArtifactPath.DATASET_METADATA.value)
+        artifacts = os.path.join(local_path, Path(ArtifactPath.DATASET.value).with_suffix(".yaml"))
         artifacts = DatasetArtifacts.from_file(artifacts)
         return artifacts
 
@@ -196,16 +211,23 @@ class ArtifactsManager:
     ) -> List[ArtifactRecord]:
         return self.repo.list_by_run(run_id, prefix=prefix, status=status)
 
-    def remove_local_copy(self, run_id: str, artifact_key: str) -> None:
+    def delete_artifact(self, run_id: str, artifact_key: Union[str, ArtifactPath]) -> Optional[bool]:
+        artifact_key = (
+            ArtifactPath(artifact_key)
+            if isinstance(artifact_key, str)
+            else artifact_key
+        )
         rec = self.repo.get(run_id, artifact_key)
         if not rec or not rec.local_path:
-            return
+            LOGGER.warning(f"Artifact {artifact_key.value} not found for for run_id: {run_id}")
+            return None
         p = Path(rec.local_path)
         if p.exists():
             if p.is_file():
                 p.unlink()
             else:
                 shutil.rmtree(p)
-        self.repo.update_local_path(
-            run_id, artifact_key, None, ArtifactStatus.REGISTERED
+        return self.repo.delete(
+            run_id, artifact_key.value
         )
+    

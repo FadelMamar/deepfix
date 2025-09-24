@@ -5,12 +5,14 @@ from .datamodel import (
     DeepchecksResultHeaders,
     DeepchecksParsedResult,
     TrainingArtifacts,
+    ModelCheckpointArtifacts,
     ArtifactPath,
+    DatasetArtifacts,
+    Artifacts,
 )
 from .manager import ArtifactsManager
 from .repository import ArtifactRepository
 from .services import ChecksumService
-from .prompt_builders import PromptBuilder
 
 __all__ = [
     "DeepchecksArtifacts",
@@ -19,11 +21,11 @@ __all__ = [
     "DeepchecksResultHeaders",
     "DeepchecksParsedResult",
     "TrainingArtifacts",
+    "ModelCheckpointArtifacts",
     "ArtifactPath",
     "ArtifactsManager",
     "ArtifactRepository",
     "ChecksumService",
-    "PromptBuilder",
-    "DeepchecksPromptBuilder",
-    "TrainingPromptBuilder",
+    "DatasetArtifacts",
+    "Artifacts",
 ]

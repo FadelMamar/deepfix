@@ -19,8 +19,6 @@ from pathlib import Path
 import os
 from tempfile import TemporaryDirectory
 import time
-from torch.utils.data import Dataset
-import json
 
 from ..core.artifacts.datamodel import (
     DeepchecksArtifacts,
@@ -28,9 +26,8 @@ from ..core.artifacts.datamodel import (
     TrainingArtifacts,
     DatasetArtifacts,
 )
-from ..core.data.utils import DataStatistics
 from .deepchecks import DeepchecksConfig
-
+from ..core.config import DefaultPaths
 from ..utils.logging import get_logger
 
 LOGGER = get_logger(__name__)
@@ -46,9 +43,9 @@ class MLflowManager:
         tracking_uri: Optional[str] = None,
         experiment_name: Optional[str] = None,
         run_id: Optional[str] = None,
-        dwnd_dir: str = "mlflow_downloads",
+        dwnd_dir: Optional[str] = None,
         create_if_not_exists: bool = False,
-        run_name: str = "default",
+        run_name: Optional[str] = None,
     ):
         """
         Initialize MLflow client with tracking configuration.
@@ -57,23 +54,25 @@ class MLflowManager:
             tracking_uri: MLflow tracking server URI
             experiment_name: Default experiment name for operations
         """
-        self.tracking_uri = tracking_uri
+        self.tracking_uri = tracking_uri or DefaultPaths.MLFLOW_TRACKING_URI.value
         self.experiment_name = experiment_name
         self.run_id = run_id
-        self.client = MlflowClient(tracking_uri=tracking_uri)
+        self.client = MlflowClient(tracking_uri=self.tracking_uri)
         self.current_experiment: Experiment = None
         self.current_run: Run = None
-        self.dwnd_dir = dwnd_dir
+        self.dwnd_dir = dwnd_dir or DefaultPaths.MLFLOW_DOWNLOADS.value
+        self.create_if_not_exists = create_if_not_exists
 
         if experiment_name is not None:
             self.set_experiment(experiment_name)
 
-        if run_id:
+        if run_id is not None:
+            assert run_name is None, "run_name must be None if run_id is provided"
             self.set_run(run_id)
             self.dwnd_dir = str(Path(self.dwnd_dir) / self.run_id)
         elif create_if_not_exists:
             assert isinstance(self.experiment_name, str),f"experiment_name must be a string, got {type(self.experiment_name)}"
-            self.create_run(run_name=run_name)
+            self.create_run(run_name=run_name or DefaultPaths.MLFLOW_RUN_NAME.value)
         
         # create directory if it doesn't exist
         Path(self.dwnd_dir).mkdir(parents=True, exist_ok=True)
@@ -92,6 +91,9 @@ class MLflowManager:
                 experiment_name
             )
             if self.current_experiment is None:
+                if not self.create_if_not_exists:
+                    LOGGER.warning(f"Experiment {experiment_name} not found and create_if_not_exists is False")
+                    
                 experiment_id = self.client.create_experiment(
                     experiment_name,
                 )
@@ -127,8 +129,8 @@ class MLflowManager:
         Returns:
             The ID of the created run
         """       
-        run = self.client.create_run(self.current_experiment.experiment_id, run_name=run_name)
-        self.run_id = run.info.run_id
+        self.current_run = self.client.create_run(self.current_experiment.experiment_id, run_name=run_name or DefaultPaths.MLFLOW_RUN_NAME.value)
+        self.run_id = self.current_run.info.run_id
     
     def get_run_info(self) -> Dict[str, Any]:
         if self.current_run is None:
@@ -157,7 +159,7 @@ class MLflowManager:
         return metric_history
 
     def get_run_metric_histories(
-        self, metric_names: List[str], log_as_artifact: bool = False
+        self, metric_names: List[str],
     ) -> pd.DataFrame:
         assert isinstance(metric_names, list), "Metric names must be a list"
         assert len(metric_names) > 0, "Metric names must be a non-empty list"
@@ -167,12 +169,6 @@ class MLflowManager:
         df = pd.concat(
             [self._get_run_metric_history(metric_name) for metric_name in metric_names]
         ).reset_index(drop=True)
-
-        if log_as_artifact:
-            with TemporaryDirectory() as tmp:
-                path = os.path.join(tmp, ArtifactPath.TRAINING_METRICS.value)
-                df.to_csv(path, index=False)
-                self.add_artifact(ArtifactPath.TRAINING.value, path)
 
         return df
 
@@ -194,15 +190,10 @@ class MLflowManager:
         assert artifacts[0].is_file(), "The artifact should be a file"
         return str(artifacts[0])
 
-    def get_run_parameters(self,log_as_artifact: bool = False) -> Dict[str, Any]:
+    def get_run_parameters(self,) -> Dict[str, Any]:
         if self.current_run is None:
             raise ValueError("Run not set")
         params = self.current_run.data.params
-        if log_as_artifact:
-            with TemporaryDirectory() as tmp:
-                    path = os.path.join(tmp, ArtifactPath.TRAINING_PARAMS.value)
-                    OmegaConf.save(params, path)
-                    self.add_artifact(ArtifactPath.TRAINING.value, path)
         return params
 
     def get_deepchecks_artifacts(self) -> DeepchecksArtifacts:
@@ -230,16 +221,17 @@ class MLflowManager:
         return artifacts
 
     def get_local_path(
-        self, artifact_key: Union[str, ArtifactPath], download_if_missing: bool = True
+        self, artifact_key: Union[str, ArtifactPath],run_id:Optional[str]=None, download_if_missing: bool = True
     ) -> str:
         artifact_key = (
             ArtifactPath(artifact_key)
             if isinstance(artifact_key, str)
             else artifact_key
         )
+        run_id = run_id or self.run_id
         if download_if_missing:
             return self.client.download_artifacts(
-                self.run_id, artifact_key.value, dst_path=self.dwnd_dir
+                run_id, artifact_key.value, dst_path=self.dwnd_dir
             )
         else:
             path = os.path.join(self.dwnd_dir, artifact_key.value)
@@ -282,13 +274,3 @@ class MLflowManager:
                 LOGGER.error(
                     f"Error logging model checkpoint: {traceback.format_exc()}"
                 )
-
-    def log_dataset(self,dataset_name:str,train_data:Dataset,test_data:Dataset):
-        assert isinstance(train_data, Dataset), "train_data must be a PyTorch Dataset"
-        assert isinstance(test_data, Dataset), "test_data must be a PyTorch Dataset"
-        data_statistics = DataStatistics(train_data=train_data,test_data=test_data)
-        dataset_artifacts = DatasetArtifacts(dataset_name=dataset_name, statistics=data_statistics.get_statistics())
-        with TemporaryDirectory() as tmp:
-            path = os.path.join(tmp, ArtifactPath.DATASET_METADATA.value)
-            OmegaConf.save(dataset_artifacts.to_dict(), path)
-            self.add_artifact(ArtifactPath.DATASET.value, path)

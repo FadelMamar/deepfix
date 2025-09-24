@@ -5,7 +5,7 @@ from typing import Iterable, List, Optional
 from datetime import datetime
 from pathlib import Path
 
-from sqlmodel import SQLModel, Session, create_engine, select
+from sqlmodel import SQLModel, Session, create_engine, select, delete
 from sqlalchemy.exc import IntegrityError
 
 from .datamodel import ArtifactRecord, ArtifactStatus
@@ -67,6 +67,20 @@ class ArtifactRepository:
                     ArtifactRecord.artifact_key == artifact_key,
                 )
             ).one_or_none()
+    
+    def delete(self, run_id: str, artifact_key: str) -> bool:
+        with self.session() as s:
+            rec = s.exec(
+                select(ArtifactRecord).where(
+                    ArtifactRecord.run_id == run_id,
+                    ArtifactRecord.artifact_key == artifact_key,
+                )
+            ).one_or_none()
+            if rec is None:
+                return False
+            s.delete(rec)
+            s.commit()
+            return True
 
     def list_by_run(
         self,

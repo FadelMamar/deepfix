@@ -14,12 +14,16 @@ from enum import StrEnum
 class DefaultPaths(StrEnum):
     MLFLOW_TRACKING_URI = "file:./deepfix_mlflow"
     MLFLOW_DOWNLOADS = "mlflow_downloads"
+    MLFLOW_RUN_NAME = "default"
 
     DATASETS_EXPERIMENT_NAME = "deepfix_datasets"
 
-    ARTIFACTS = "tmp/artifacts.db"
-    
+    ARTIFACTS_SQLITE_PATH = "tmp/artifacts.db"
+
     ADVISOR_OUTPUT_DIR = "advisor_output"
+
+
+    
     
 
 class MLflowConfig(BaseModel):
@@ -62,7 +66,7 @@ class ArtifactConfig(BaseModel):
         default=True, description="Whether to enable local caching"
     )
     sqlite_path: str = Field(
-        default=DefaultPaths.ARTIFACTS.value,
+        default=DefaultPaths.ARTIFACTS_SQLITE_PATH.value,
         description="Path to SQLite database for artifact caching",
     )
 

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import math
 
 from .base import BasePromptBuilder
-from ...artifacts.datamodel import TrainingArtifacts
+from ..artifacts import TrainingArtifacts, Artifacts    
 
 
 class CurvePlotter:
@@ -74,9 +74,9 @@ class CurvePlotter:
 class TrainingPromptBuilder(BasePromptBuilder):
     """Builds prompts for training artifact analysis."""
 
-    def can_build(self, artifact_type: str) -> bool:
+    def can_build(self, artifact: Artifacts) -> bool:
         """Check if this builder can handle TrainingArtifacts."""
-        return artifact_type == TrainingArtifacts.__name__
+        return isinstance(artifact, TrainingArtifacts)
 
     def build_prompt(
         self,
@@ -85,13 +85,10 @@ class TrainingPromptBuilder(BasePromptBuilder):
         context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Build structured prompt from TrainingArtifacts."""
-        prompt_parts = [
-            #f"Metrics available: {artifact.metrics_values is not None}",
-            #f"Parameters available: {artifact.params is not None}",
-        ]
-
+        prompt_parts = []
         # Add metrics analysis if available
         if artifact.metrics_values is not None and plot_curves:
+            raise NotImplementedError("Plotting curves is not implemented yet")
             plotter = CurvePlotter()
             plot_path = (
                 Path(artifact.metrics_path)

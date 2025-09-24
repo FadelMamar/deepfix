@@ -7,9 +7,10 @@ from DeepchecksArtifacts instances.
 
 from typing import Optional, Dict, Any, Union
 from .base import BasePromptBuilder
-from ..datamodel import (
+from ..artifacts import (
     DeepchecksArtifacts,
     DeepchecksParsedResult,
+    Artifacts,
 )
 from pydantic import BaseModel
 import re
@@ -102,9 +103,9 @@ class Extractor:
 class DeepchecksPromptBuilder(BasePromptBuilder):
     """Builds prompts for Deepchecks artifact analysis."""
 
-    def can_build(self, artifact_type: str) -> bool:
+    def can_build(self, artifact: Artifacts) -> bool:
         """Check if this builder can handle DeepchecksArtifacts."""
-        return artifact_type == DeepchecksArtifacts.__name__
+        return isinstance(artifact, DeepchecksArtifacts)
 
     def build_prompt(
         self,

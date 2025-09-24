@@ -1,5 +1,6 @@
-from abc import ABC, abstractmethod
 import traceback
+from abc import ABC, abstractmethod
+
 from ...utils.logging import get_logger
 
 LOGGER = get_logger(__name__)
@@ -20,5 +21,5 @@ class Pipeline:
             try:
                 step.run(context=self.context)
             except Exception as e:
-                LOGGER.error(f"Step {step.__class__.__name__} failed with error: {traceback.format_exc()}")
+                LOGGER.error(f"Step {step.__class__.__name__} failed with error: {e}")
         return self.context

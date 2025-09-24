@@ -5,29 +5,29 @@ This module provides the abstract base class for all prompt builders.
 """
 
 from abc import ABC, abstractmethod
-from typing import Union, Optional, Dict, Any, List
-from ..datamodel import DeepchecksArtifacts, TrainingArtifacts
+from typing import Optional, Dict, Any
+from ..artifacts import Artifacts
 
 
 class BasePromptBuilder(ABC):
     """Abstract base class for prompt builders."""
 
     @abstractmethod
-    def can_build(self, artifact_type: str) -> bool:
+    def can_build(self, artifact: Artifacts) -> bool:
         """Check if this builder can handle the artifact type.
 
         Args:
-            artifact_type: The type of artifact (e.g., 'DeepchecksArtifacts', 'TrainingArtifacts')
+            artifact: The artifact to build a prompt for
 
         Returns:
-            True if this builder can handle the artifact type, False otherwise
+            True if this builder can handle the artifact, False otherwise
         """
         pass
 
     @abstractmethod
     def build_prompt(
         self,
-        artifact: Union[DeepchecksArtifacts, TrainingArtifacts],
+        artifact: Artifacts,
         context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Build structured prompt from artifact.
