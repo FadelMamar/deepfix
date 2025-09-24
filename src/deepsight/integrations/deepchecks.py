@@ -27,7 +27,7 @@ from ..core.artifacts.datamodel import (
     DeepchecksArtifacts,
     DeepchecksResultHeaders,
 )
-from ..core.config import DeepchecksConfig 
+from ..core.config import DeepchecksConfig
 
 LOGGER = get_logger(__name__)
 
@@ -171,7 +171,9 @@ class DeepchecksRunner:
             )
             output["model_evaluation"] = self.parser.run(out_model_evaluation)
 
-        artifact = DeepchecksArtifacts(dataset_name=dataset_name, results=output,config=self.config)
+        artifact = DeepchecksArtifacts(
+            dataset_name=dataset_name, results=output, config=self.config
+        )
 
         if self.config.save_results:
             self._save_artifact(artifact=artifact, dataset_name=dataset_name)

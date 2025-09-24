@@ -1,12 +1,8 @@
 from typing import Dict, Any, Optional, Union
 from rich.progress import Progress
 
-from .models import (
-    IntelligenceResponse,
-    IntelligenceProviders,
-    IntelligenceConfig
-)
-from .providers import DspyLLMProvider,CursorAgentProvider
+from .models import IntelligenceResponse, IntelligenceProviders, IntelligenceConfig
+from .providers import DspyLLMProvider, CursorAgentProvider
 
 
 class IntelligenceClient:
@@ -16,13 +12,13 @@ class IntelligenceClient:
     """
 
     def __init__(self, config: IntelligenceConfig):
-        self.config:IntelligenceConfig = config 
+        self.config: IntelligenceConfig = config
         self.IntelligenceProviders: Dict[IntelligenceProviders, Any] = {}
         self.provider = self._initialize_provider()
 
     def _initialize_provider(self) -> Union[CursorAgentProvider, DspyLLMProvider]:
         # LLM
-        if self.config.provider_name == IntelligenceProviders.LLM :
+        if self.config.provider_name == IntelligenceProviders.LLM:
             return DspyLLMProvider(config=self.config.llm_config)
         # Coding Agent(s)
         elif self.config.provider_name == IntelligenceProviders.CURSOR:
@@ -39,4 +35,3 @@ class IntelligenceClient:
             response = self.provider.execute(prompt, context or {})
 
         return response
-

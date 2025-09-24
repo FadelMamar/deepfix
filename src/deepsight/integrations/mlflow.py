@@ -17,7 +17,6 @@ from omegaconf import OmegaConf
 import pandas as pd
 from pathlib import Path
 import os
-from tempfile import TemporaryDirectory
 import time
 
 from ..core.artifacts.datamodel import (
@@ -27,7 +26,7 @@ from ..core.artifacts.datamodel import (
     DatasetArtifacts,
 )
 from .deepchecks import DeepchecksConfig
-from ..core.config import DefaultPaths
+from ..core.config import DefaultPaths, MLflowConfig
 from ..utils.logging import get_logger
 
 LOGGER = get_logger(__name__)
@@ -71,13 +70,26 @@ class MLflowManager:
             self.set_run(run_id)
             self.dwnd_dir = str(Path(self.dwnd_dir) / self.run_id)
         elif create_if_not_exists:
-            assert isinstance(self.experiment_name, str),f"experiment_name must be a string, got {type(self.experiment_name)}"
+            assert isinstance(self.experiment_name, str), (
+                f"experiment_name must be a string, got {type(self.experiment_name)}"
+            )
             self.create_run(run_name=run_name or DefaultPaths.MLFLOW_RUN_NAME.value)
-        
+
         # create directory if it doesn't exist
         Path(self.dwnd_dir).mkdir(parents=True, exist_ok=True)
 
         mlflow.set_tracking_uri(tracking_uri)
+
+    @classmethod
+    def from_config(cls, config: MLflowConfig) -> "MLflowManager":
+        return cls(
+            tracking_uri=config.tracking_uri,
+            experiment_name=config.experiment_name,
+            run_id=config.run_id,
+            dwnd_dir=config.download_dir,
+            create_if_not_exists=config.create_if_not_exists,
+            run_name=config.run_name,
+        )
 
     def set_experiment(self, experiment_name: str) -> None:
         """
@@ -92,24 +104,30 @@ class MLflowManager:
             )
             if self.current_experiment is None:
                 if not self.create_if_not_exists:
-                    LOGGER.warning(f"Experiment {experiment_name} not found and create_if_not_exists is False")
-                    
+                    LOGGER.warning(
+                        f"Experiment {experiment_name} not found and create_if_not_exists is False"
+                    )
+
                 experiment_id = self.client.create_experiment(
                     experiment_name,
                 )
                 # Wait a moment for the experiment to be fully created and available
-                
+
                 time.sleep(0.1)
                 # Try to get the experiment, with fallback to get_experiment_by_name
                 try:
                     self.current_experiment = self.client.get_experiment(experiment_id)
                 except Exception:
                     # Fallback: get by name in case the ID lookup fails
-                    self.current_experiment = self.client.get_experiment_by_name(experiment_name)
+                    self.current_experiment = self.client.get_experiment_by_name(
+                        experiment_name
+                    )
                     if self.current_experiment is None:
                         # If still None, wait a bit more and try again
                         time.sleep(0.5)
-                        self.current_experiment = self.client.get_experiment_by_name(experiment_name)
+                        self.current_experiment = self.client.get_experiment_by_name(
+                            experiment_name
+                        )
         except Exception as e:
             raise ValueError(f"Experiment {experiment_name} not found: {str(e)}")
 
@@ -119,8 +137,8 @@ class MLflowManager:
         """
         self.current_run = self.client.get_run(run_id)
         self.run_id = run_id
-    
-    def create_run(self,run_name:str)->None:
+
+    def create_run(self, run_name: str) -> None:
         """
         Create a new MLflow run.
 
@@ -128,10 +146,13 @@ class MLflowManager:
             run_name: Name of the new run
         Returns:
             The ID of the created run
-        """       
-        self.current_run = self.client.create_run(self.current_experiment.experiment_id, run_name=run_name or DefaultPaths.MLFLOW_RUN_NAME.value)
+        """
+        self.current_run = self.client.create_run(
+            self.current_experiment.experiment_id,
+            run_name=run_name or DefaultPaths.MLFLOW_RUN_NAME.value,
+        )
         self.run_id = self.current_run.info.run_id
-    
+
     def get_run_info(self) -> Dict[str, Any]:
         if self.current_run is None:
             raise ValueError("Run not set")
@@ -159,7 +180,8 @@ class MLflowManager:
         return metric_history
 
     def get_run_metric_histories(
-        self, metric_names: List[str],
+        self,
+        metric_names: List[str],
     ) -> pd.DataFrame:
         assert isinstance(metric_names, list), "Metric names must be a list"
         assert len(metric_names) > 0, "Metric names must be a non-empty list"
@@ -190,7 +212,9 @@ class MLflowManager:
         assert artifacts[0].is_file(), "The artifact should be a file"
         return str(artifacts[0])
 
-    def get_run_parameters(self,) -> Dict[str, Any]:
+    def get_run_parameters(
+        self,
+    ) -> Dict[str, Any]:
         if self.current_run is None:
             raise ValueError("Run not set")
         params = self.current_run.data.params
@@ -221,7 +245,10 @@ class MLflowManager:
         return artifacts
 
     def get_local_path(
-        self, artifact_key: Union[str, ArtifactPath],run_id:Optional[str]=None, download_if_missing: bool = True
+        self,
+        artifact_key: Union[str, ArtifactPath],
+        run_id: Optional[str] = None,
+        download_if_missing: bool = True,
     ) -> str:
         artifact_key = (
             ArtifactPath(artifact_key)
@@ -260,16 +287,20 @@ class MLflowManager:
         self.client.log_artifact(
             run_id=self.run_id, artifact_path=artifact_key, local_path=local_path
         )
-        
-    def log_artifact(self,artifact_key: str, local_path: str,run_id:Optional[str]=None,run_name:Optional[str]=None):
-        if run_id is None:
-            return self.add_artifact(artifact_key=artifact_key,local_path=local_path)
 
-        with mlflow.start_run(run_id=run_id,run_name=run_name):
+    def log_artifact(
+        self,
+        artifact_key: str,
+        local_path: str,
+        run_id: Optional[str] = None,
+        run_name: Optional[str] = None,
+    ):
+        if run_id is None:
+            return self.add_artifact(artifact_key=artifact_key, local_path=local_path)
+
+        with mlflow.start_run(run_id=run_id, run_name=run_name):
             try:
-                mlflow.log_artifact(
-                    str(local_path), artifact_key
-                )
+                mlflow.log_artifact(str(local_path), artifact_key)
             except Exception:
                 LOGGER.error(
                     f"Error logging model checkpoint: {traceback.format_exc()}"

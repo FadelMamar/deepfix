@@ -268,7 +268,7 @@ def get_label_mapping(as_eng: bool = True) -> Tuple[Dict[int, str], Dict[int, in
             if n not in ing2name:
                 ing2name[n] = str(ing).lower().strip().replace(" ", "_")
     if as_eng:
-        ing2name = {k: translations_de_en[v] for k,v in ing2name.items()}
+        ing2name = {k: translations_de_en[v] for k, v in ing2name.items()}
     ing2name = OrderedDict(sorted(ing2name.items()))
     ing2label = OrderedDict({k: i for i, k in enumerate(ing2name.keys())})
     return ing2name, ing2label

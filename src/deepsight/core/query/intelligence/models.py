@@ -3,7 +3,7 @@ from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 
-class IntelligenceProviders(str,Enum):
+class IntelligenceProviders(str, Enum):
     CURSOR = "cursor"
     LLM = "llm"
 
@@ -25,9 +25,7 @@ class LLMConfig(BaseModel):
     base_url: Optional[str] = Field(
         default=None, description="Base URL for the LLM API"
     )
-    model_name: str = Field(
-        default=None, description="Model name to use for the LLM"
-    )
+    model_name: str = Field(default=None, description="Model name to use for the LLM")
     temperature: float = Field(
         default=0.7, description="Sampling temperature for text generation"
     )

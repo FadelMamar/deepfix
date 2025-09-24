@@ -20,7 +20,6 @@ class PromptBuilderConfig(BaseModel):
     # Logging configuration
     logging: Dict[str, Any] = Field(default_factory=dict)
 
-
     @classmethod
     def from_dict(cls, config: Dict[str, Any]) -> "PromptBuilderConfig":
         """Create a PromptBuilderConfig from a dictionary."""

@@ -21,8 +21,8 @@ class DatasetPromptBuilder(BasePromptBuilder):
         prompt_parts = []
         prompt_parts.append(f"\nDataset name: {artifact.dataset_name}")
         prompt_parts.append(f"\nDataset statistics:")
-        prompt_parts.append(f"- {json.dumps(artifact.statistics,indent=2)}")       
-        
+        prompt_parts.append(f"- {json.dumps(artifact.statistics, indent=2)}")
+
         # Add context if provided
         if context:
             context_str = self._format_context(context)

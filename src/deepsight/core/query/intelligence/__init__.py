@@ -7,9 +7,9 @@ from .models import (
     IntelligenceResponse,
     IntelligenceProviderError,
     IntelligenceProviders,
-    IntelligenceConfig, 
-    CursorConfig, 
-    LLMConfig
+    IntelligenceConfig,
+    CursorConfig,
+    LLMConfig,
 )
 from .providers.llm.dspy import DspyLLMProvider
 from .providers.coding_agent.cursor import CursorAgentProvider

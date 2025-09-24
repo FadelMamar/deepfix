@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import math
 
 from .base import BasePromptBuilder
-from ..artifacts import TrainingArtifacts, Artifacts    
+from ..artifacts import TrainingArtifacts, Artifacts
 
 
 class CurvePlotter:
@@ -124,5 +124,3 @@ class TrainingPromptBuilder(BasePromptBuilder):
         # Combine and truncate if necessary
         full_prompt = "\n".join(prompt_parts)
         return full_prompt
-
-    

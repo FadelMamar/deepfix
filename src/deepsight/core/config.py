@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, field_validator
 from omegaconf import DictConfig, OmegaConf
 from enum import StrEnum
 
+
 class DefaultPaths(StrEnum):
     MLFLOW_TRACKING_URI = "file:./deepfix_mlflow"
     MLFLOW_DOWNLOADS = "mlflow_downloads"
@@ -23,16 +24,14 @@ class DefaultPaths(StrEnum):
     ADVISOR_OUTPUT_DIR = "advisor_output"
 
 
-    
-    
-
 class MLflowConfig(BaseModel):
     """Configuration for MLflow integration."""
 
     tracking_uri: str = Field(
-        default=DefaultPaths.MLFLOW_TRACKING_URI.value, description="MLflow tracking server URI"
+        default=DefaultPaths.MLFLOW_TRACKING_URI.value,
+        description="MLflow tracking server URI",
     )
-    run_id: Optional[str] = Field(default=None,description="MLflow run ID to analyze")
+    run_id: Optional[str] = Field(default=None, description="MLflow run ID to analyze")
     download_dir: str = Field(
         default=DefaultPaths.MLFLOW_DOWNLOADS.value,
         description="Local directory for downloading artifacts",
@@ -40,10 +39,26 @@ class MLflowConfig(BaseModel):
     experiment_name: Optional[str] = Field(
         default=None, description="MLflow experiment name (optional)"
     )
+    create_if_not_exists: bool = Field(
+        default=False,
+        description="Whether to create the experiment if it doesn't exist",
+    )
+    run_name: Optional[str] = Field(default=None, description="MLflow run name")
+
+    dataset_experiment_name: str = Field(
+        default=DefaultPaths.DATASETS_EXPERIMENT_NAME.value,
+        description="MLflow experiment name for datasets",
+    )
 
     @field_validator("tracking_uri")
     def validate_tracking_uri(cls, v):
-        if not v.startswith(("http://", "https://", "file://",)):
+        if not v.startswith(
+            (
+                "http://",
+                "https://",
+                "file://",
+            )
+        ):
             raise ValueError(
                 "tracking_uri must start with http://, https://, or file://"
             )
@@ -53,11 +68,21 @@ class MLflowConfig(BaseModel):
 class ArtifactConfig(BaseModel):
     """Configuration for artifact management."""
 
+    dataset_name: Optional[str] = Field(
+        default=None, description="Name of the dataset to load"
+    )
+
     load_training: bool = Field(
         default=True, description="Whether to load training artifacts"
     )
     load_checks: bool = Field(
         default=True, description="Whether to load Deepchecks artifacts"
+    )
+    load_dataset_metadata: bool = Field(
+        default=True, description="Whether to load dataset metadata"
+    )
+    load_model_checkpoint: bool = Field(
+        default=False, description="Whether to load model checkpoint"
     )
     download_if_missing: bool = Field(
         default=True, description="Whether to download artifacts if not locally cached"
@@ -73,8 +98,15 @@ class ArtifactConfig(BaseModel):
 
 class PromptConfig(BaseModel):
     """Configuration for query generation."""
+
     custom_instructions: Optional[str] = Field(
         default=None, description="Custom instructions to append to created prompts"
+    )
+    dataset_analysis: bool = Field(
+        default=True, description="Whether to analyze the dataset"
+    )
+    training_results_analysis: bool = Field(
+        default=False, description="Whether to analyze the training"
     )
 
 
@@ -88,7 +120,8 @@ class OutputConfig(BaseModel):
         default=True, description="Whether to save AI responses"
     )
     output_dir: str = Field(
-        default=DefaultPaths.ADVISOR_OUTPUT_DIR.value, description="Directory to save outputs"
+        default=DefaultPaths.ADVISOR_OUTPUT_DIR.value,
+        description="Directory to save outputs",
     )
     format: str = Field(default="txt", description="Output format (txt, json, yaml)")
 

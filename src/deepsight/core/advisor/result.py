@@ -19,7 +19,7 @@ class AdvisorResult(BaseModel):
     """Result object containing all information from an advisor analysis run."""
 
     # Basic information
-    run_id: str = Field(description="MLflow run ID that was analyzed")
+    run_id: Optional[str] = Field(None, description="MLflow run ID that was analyzed")
     timestamp: datetime = Field(
         default_factory=datetime.now,
         description="Timestamp when the analysis was completed",
@@ -54,7 +54,6 @@ class AdvisorResult(BaseModel):
     intelligence_execution_time: float = Field(
         default=0.0, description="Time spent executing intelligence query in seconds"
     )
-
 
     def set_prompt(self, prompt: str) -> None:
         """Set the generated prompt and calculate its length."""

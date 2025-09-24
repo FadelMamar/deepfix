@@ -1,4 +1,5 @@
 """Main Cursor CLI integration class."""
+
 from typing import Dict, Any, Optional, List, Union
 import time
 import traceback
@@ -11,9 +12,10 @@ from ....models import (
     IntelligenceProviderError,
     IntelligenceProviders,
     Capabilities,
-    CursorConfig
+    CursorConfig,
 )
 from ...base import BaseProvider
+
 
 class Cursor:
     """Main integration class for Cursor CLI non-interactive mode."""
@@ -25,7 +27,7 @@ class Cursor:
         timeout: int = 300,
         cli_path: str = "cursor-agent",
         working_directory: Optional[str] = None,
-        config:Optional[CursorConfig]=None,
+        config: Optional[CursorConfig] = None,
         **kwargs,
     ):
         """Initialize Cursor integration.
@@ -106,6 +108,7 @@ class Cursor:
                     self.config.additional_args = {}
                 self.config.additional_args[key] = value
 
+
 class CursorAgentProvider(BaseProvider):
     def __init__(self, config: CursorConfig):
         self.config = config
@@ -147,7 +150,7 @@ class CursorAgentProvider(BaseProvider):
             Capabilities.REASONING,
             Capabilities.TEXT_GENERATION,
         ]
-    
+
     @property
     def instructions(self) -> str:
         return """ONLY ANSWER BASED ON THE PROVIDED INFORMATION. DO NOT MAKE UP ANYTHING or READ ANY OTHER FILES.

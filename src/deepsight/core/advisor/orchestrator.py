@@ -11,15 +11,14 @@ from pathlib import Path
 import traceback
 from pydantic import BaseModel, Field
 import yaml
-
+from copy import deepcopy
 from ...integrations.mlflow import MLflowManager
 
-from ..query import IntelligenceClient,IntelligenceConfig
+from ..query import IntelligenceClient, IntelligenceConfig
 from ...utils.logging import get_logger
 
-from ..config import PromptConfig, OutputConfig,MLflowConfig,ArtifactConfig
-from ..pipelines.base import Pipeline
-from ..pipelines.artifacts import LoadTrainingArtifact,LoadDeepchecksArtifacts
+from ..config import PromptConfig, OutputConfig, MLflowConfig, ArtifactConfig
+from ..pipelines import ArtifactLoadingPipeline, Pipeline, Query
 from ..pipelines.prompts import BuildPrompt
 from .result import AdvisorResult
 from .errors import (
@@ -27,6 +26,7 @@ from .errors import (
     OutputError,
     IntelligenceError,
 )
+
 
 class AdvisorConfig(BaseModel):
     """Main configuration class for DeepSight Advisor."""
@@ -132,7 +132,7 @@ def load_config(
         return AdvisorConfig.from_file(config_source)
     else:
         raise ValueError(f"Unsupported config source type: {type(config_source)}")
-    
+
 
 class DeepSightAdvisor:
     """
@@ -152,7 +152,7 @@ class DeepSightAdvisor:
         Args:
             config: Configuration object, file path, or dictionary
         """
-        self.logger = get_logger(__name__)
+        self.logger = get_logger(self.__class__.__name__)
 
         # Load and validate configuration
         try:
@@ -162,44 +162,34 @@ class DeepSightAdvisor:
         except Exception as e:
             raise ConfigurationError(f"Failed to load configuration: {e}")
 
-        # Initialize intelligence client
-        self.intelligence_client = IntelligenceClient(self.config.intelligence)
-
-    def initialize_preprocessing_pipeline(self,run_id: str)->Pipeline:
-        steps = []
-
-        if not isinstance(run_id,str):
-            raise ConfigurationError(f"run_id provided is not of type str, type: {type(run_id)}")
+    def initialize_processing_pipeline(self, run_id: str) -> Pipeline:
+        if not isinstance(run_id, str):
+            raise ConfigurationError(
+                f"run_id provided is not of type str, type: {type(run_id)}"
+            )
 
         try:
-            # Initialize MLflow manager
-            mlflow_manager = MLflowManager(
-                tracking_uri=self.config.mlflow.tracking_uri,
-                run_id= run_id,
-                dwnd_dir=self.config.mlflow.download_dir,
-            )
-            self.logger.info(
-                f"MLflow manager initialized: {self.config.mlflow.tracking_uri}, run_id={self.config.mlflow.run_id}"
-            )
-            
             # step 1: load artifacts
-            cfg = dict(mlflow_manager=mlflow_manager,artifact_sqlite_path=self.config.artifacts.sqlite_path)
-            if self.config.artifacts.load_training:
-                steps.append(LoadTrainingArtifact(**cfg))
-            if self.config.artifacts.load_checks:
-                steps.append(LoadDeepchecksArtifacts(**cfg))            
+            mlflow_config = deepcopy(self.config.mlflow)
+            mlflow_config.run_id = run_id
+            pipe = ArtifactLoadingPipeline.from_config(
+                mlflow_config=mlflow_config, artifact_config=self.config.artifacts
+            )
             self.logger.info("Artifacts loaders initialized")
 
-            # step 2: build prompt
-            steps.append(BuildPrompt(self.config.prompt))
+            # step 2-3: build prompt and execute query
+            pipe.append_steps(
+                [BuildPrompt(self.config.prompt), Query(self.config.intelligence)]
+            )
             self.logger.info("Query generator initialized")
 
         except Exception:
-            raise ConfigurationError(f"Failed to initialize preprocessing pipeline: {traceback.format_exc()}")
+            raise ConfigurationError(
+                f"Failed to initialize preprocessing pipeline: {traceback.format_exc()}"
+            )
+        return pipe
 
-        return Pipeline(steps=steps)
-
-    def run_analysis(self, run_id: str) -> Union[AdvisorResult,None]:
+    def run_analysis(self, run_id: str) -> Union[AdvisorResult, None]:
         """
         Run complete analysis pipeline for given run_id.
 
@@ -210,29 +200,22 @@ class DeepSightAdvisor:
             AdvisorResult containing all analysis information
         """
         # Initialize components
-        load_and_transform = self.initialize_preprocessing_pipeline(run_id=run_id)
+        pipe = self.initialize_processing_pipeline(run_id=run_id)
 
         start_time = time.time()
-        # Initialize result object
-        result = AdvisorResult(run_id=run_id)
-
         try:
             self.logger.info(f"Starting analysis for run_id: {run_id}")
 
-            # Step 1: Load artifacts data as a prompt
-            self.logger.info("Step 1: artifacts -> prompt...")
-            context = load_and_transform.run()
+            # run pipeline
+            context = pipe.run()
+            if context.get("advisor_result") is None:
+                self.logger.error("Advisor failed. No result found.")
+                return
+            result: AdvisorResult = context["advisor_result"]
 
-            # Step 2: Execute query
-            self.logger.info("Step 2: Executing intelligence query...")
-            self.execute_query(context['prompt'], result)
-
-            # Step 4: Save results
-            self.logger.info("Step 3: Saving results...")
-            self.save_results(result)
-
-            # Calculate total execution time
+            self.logger.info("Saving Advisor results...")
             result.execution_time = time.time() - start_time
+            self.save_results(result)
 
             self.logger.info(
                 f"Analysis completed successfully in {result.execution_time:.2f} seconds"
@@ -240,42 +223,8 @@ class DeepSightAdvisor:
             return result
 
         except Exception as e:
-            result.execution_time = time.time() - start_time
             self.logger.error(f"Analysis failed: {traceback.format_exc()}")
             return None
-
-    def execute_query(self, prompt: str, result: AdvisorResult) -> None:
-        """
-        Execute query using configured intelligence provider.
-
-        Args:
-            prompt: Generated prompt to execute
-            result: Result object to update with response information
-        """
-        start_time = time.time()
-
-        try:
-            # Prepare execution context
-            context = self.config.intelligence.context or {}
-            # Execute query
-            response = self.intelligence_client.execute_query(
-                prompt=prompt,
-                context=context,
-            )
-
-            # Update result
-            result.set_response(response)
-            result.set_prompt(prompt)
-            result.intelligence_execution_time = time.time() - start_time
-
-            self.logger.info(
-                f"Query executed successfully in {result.intelligence_execution_time:.2f} seconds"
-            )
-            self.logger.debug(f"Response length: {result.response_length} characters")
-
-        except Exception:
-            result.intelligence_execution_time = time.time() - start_time
-            raise IntelligenceError(f"Query execution failed: {traceback.format_exc()}")
 
     def save_results(self, result: AdvisorResult) -> None:
         """
@@ -381,6 +330,7 @@ def run_analysis(
     # Create advisor and run analysis
     advisor = DeepSightAdvisor(config)
     return advisor.run_analysis()
+
 
 def create_default_config(
     run_id: str, tracking_uri: str = "http://localhost:5000"

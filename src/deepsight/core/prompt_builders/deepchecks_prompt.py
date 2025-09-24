@@ -163,4 +163,4 @@ class DeepchecksPromptBuilder(BasePromptBuilder):
 
         # Combine and truncate if necessary
         full_prompt = "\n".join(prompt_parts)
-        return full_prompt 
+        return full_prompt

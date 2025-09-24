@@ -13,21 +13,20 @@ from .deepchecks_prompt import DeepchecksPromptBuilder
 from .training_prompt import TrainingPromptBuilder
 from .dataset_prompt import DatasetPromptBuilder
 from .base import BasePromptBuilder
+from .instructions import get_instructions
 
 
 class PromptBuilder:
     """Main class for orchestrating prompt creation from existing Pydantic models."""
 
-    def __init__(
-        self,config: Optional[PromptConfig] = None
-    ):
+    def __init__(self, config: Optional[PromptConfig] = None):
         """Initialize the PromptBuilder.
 
         Args:
             config: Optional configuration for the PromptBuilder
             config_path: Optional path to configuration file
         """
-        self.logger = get_logger(__name__)
+        self.logger = get_logger(self.__class__.__name__)
         self.prompt_builders = self._initialize_prompt_builders()
         self.config: Optional[PromptConfig] = config
 
@@ -56,15 +55,14 @@ class PromptBuilder:
                         )
                 else:
                     raise PromptBuilderError(
-                        artifact.__class__.__name__, "No prompt builder found for artifact type"
+                        artifact.__class__.__name__,
+                        "No prompt builder found for artifact type",
                     )
 
             # Combine all prompts
-            custom_instructions = getattr(self.config, 'custom_instructions') or ""
+            custom_instructions = getattr(self.config, "custom_instructions") or ""
             prompt_parts.append(custom_instructions)
-            full_prompt = ("\n\n".join(prompt_parts) 
-                           + "\n".join(self.instructions)
-                        )
+            full_prompt = "\n\n".join(prompt_parts) + get_instructions(self.config)
 
             return full_prompt
 
@@ -73,30 +71,8 @@ class PromptBuilder:
                 "unknown",
                 f"Unexpected error during prompt building: {traceback.format_exc()}",
             )
-    @property
-    def instructions(self) -> List[str]:
-        """Get query-specific instructions based on query type."""
-        base_instructions = [
-            "Please provide, If applicable:",
-            "1. Analysis of training performance",
-            "2. Overfitting assessment and recommendations",
-            "3. Suggested hyperparameter adjustments",
-            "4. Next steps for model improvement",
-            "5. Specific overfitting indicators and their severity",
-            "6. Regularization techniques to implement",
-            "7. Data augmentation recommendations",
-            "8. Performance bottleneck identification",
-            "9. Model architecture optimization suggestions",
-            "10. Training strategy improvements",
-            "11. Hyperparameter sensitivity analysis",
-            "12. Learning rate schedule recommendations",
-            "13. Batch size and optimizer suggestions",
-            ]
-        return base_instructions
 
-    def _get_prompt_builder(
-        self, artifact: Artifacts
-    ) -> Optional[BasePromptBuilder]:
+    def _get_prompt_builder(self, artifact: Artifacts) -> Optional[BasePromptBuilder]:
         """Get appropriate prompt builder for the given artifact type."""
         for builder in self.prompt_builders:
             if builder.can_build(artifact):
@@ -107,5 +83,9 @@ class PromptBuilder:
         self,
     ) -> List[BasePromptBuilder]:
         """Initialize prompt builders based on configuration."""
-        builders = [DeepchecksPromptBuilder(), TrainingPromptBuilder(), DatasetPromptBuilder()]
+        builders = [
+            DeepchecksPromptBuilder(),
+            TrainingPromptBuilder(),
+            DatasetPromptBuilder(),
+        ]
         return builders

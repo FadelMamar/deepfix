@@ -34,6 +34,7 @@ class ArtifactPath(StrEnum):
     # dataset artifacts
     DATASET = "dataset"
 
+
 ## Deepchecks
 class DeepchecksResultHeaders(StrEnum):
     # Train-Test Validation
@@ -48,6 +49,7 @@ class DeepchecksResultHeaders(StrEnum):
     PropertyLabelCorrelation = "Property Label Correlation"
     LabelPropertyOutliers = "Label Property Outliers"
     ClassPerformance = "Class Performance"
+
 
 class DeepchecksParsedResult(BaseModel):
     header: str = Field(description="Header of the result")
@@ -79,14 +81,16 @@ class DeepchecksParsedResult(BaseModel):
             display_txt=d.get("display_txt", None),
         )
 
+
 class Artifacts(BaseModel):
-    
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:
         pass
+
     @classmethod
-    def from_dict(cls,d:dict):
+    def from_dict(cls, d: dict):
         return cls(**d)
+
 
 class DeepchecksArtifacts(Artifacts):
     dataset_name: str = Field(description="Name of the dataset")
@@ -142,25 +146,27 @@ class DeepchecksArtifacts(Artifacts):
 
         return artifacts
 
+
 class ModelCheckpointArtifacts(Artifacts):
     path: str = Field(description="Path to the model checkpoint")
     config: Optional[Dict[str, Any]] = Field(
         default=None, description="Config of the model"
     )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         dumped_dict = self.model_dump()
         return dumped_dict
-    
+
     @classmethod
-    def from_dict(cls,d:dict):
+    def from_dict(cls, d: dict):
         return cls(model_path=d["model_path"], model_config=d.get("config"))
-    
+
     @classmethod
     def from_file(cls, path: str) -> "ModelCheckpointArtifacts":
         with open(path, "r") as f:
             d = yaml.safe_load(f)
         return cls.from_dict(d)
+
 
 # Training Artifacts
 class TrainingArtifacts(Artifacts):
@@ -181,25 +187,32 @@ class TrainingArtifacts(Artifacts):
         if self.metrics_values is not None:
             dumped_dict["metrics_values"] = self.metrics_values.to_dict(orient="list")
         return dumped_dict
-    
+
     @classmethod
-    def from_dict(cls,d:dict):
+    def from_dict(cls, d: dict):
         if d.get("metrics_values"):
-            metrics_values=pd.DataFrame.from_dict(d.get("metrics_values"))
+            metrics_values = pd.DataFrame.from_dict(d.get("metrics_values"))
         elif d.get("metrics_path"):
-            metrics_values=pd.read_csv(d.get("metrics_path"))
+            metrics_values = pd.read_csv(d.get("metrics_path"))
         else:
-            metrics_values=None
-        return cls(metrics_path=d.get("metrics_path"), metrics_values=metrics_values, params=d.get("params"))
+            metrics_values = None
+        return cls(
+            metrics_path=d.get("metrics_path"),
+            metrics_values=metrics_values,
+            params=d.get("params"),
+        )
 
     @classmethod
     def from_file(cls, metrics_path: str) -> "TrainingArtifacts":
         return cls(metrics_path=metrics_path, metrics_values=pd.read_csv(metrics_path))
 
+
 # Dataset
 class DatasetArtifacts(Artifacts):
-    dataset_name: str = Field(...,description="Name of the dataset")
-    statistics: Optional[Dict[str, Any]] = Field(default=None,description="Statistics of the dataset")
+    dataset_name: str = Field(..., description="Name of the dataset")
+    statistics: Optional[Dict[str, Any]] = Field(
+        default=None, description="Statistics of the dataset"
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         dumped_dict = self.model_dump()
@@ -211,12 +224,14 @@ class DatasetArtifacts(Artifacts):
             d = yaml.safe_load(f)
         return cls(dataset_name=d["dataset_name"], statistics=d["statistics"])
 
+
 # SQLModel
 class ArtifactStatus(StrEnum):
     REGISTERED = "REGISTERED"
     DOWNLOADED = "DOWNLOADED"
     MISSING = "MISSING"
     ERROR = "ERROR"
+
 
 class ArtifactRecord(SQLModel, table=True):
     __tablename__ = "artifacts"

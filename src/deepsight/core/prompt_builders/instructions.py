@@ -2,7 +2,9 @@
 Instructions for prompt building.
 """
 
-base_instructions = """Please provide, If applicable:
+from ..config import PromptConfig
+
+training_results_instructions = """Please provide, If applicable:
                         1. Analysis of training performance
                         2. Overfitting assessment and recommendations
                         3. Suggested hyperparameter adjustments
@@ -86,3 +88,12 @@ dataset_diagnostics_instructions = """
     Prioritize Ruthlessly: The most impactful and easiest recommendations must come first.
 
     """
+
+
+def get_instructions(config: PromptConfig) -> str:
+    instructions = []
+    if config.dataset_analysis:
+        instructions.append(dataset_diagnostics_instructions)
+    if config.training_results_analysis:
+        instructions.append(training_results_instructions)
+    return "\n\n".join(instructions)

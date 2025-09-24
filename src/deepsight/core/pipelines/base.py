@@ -5,17 +5,19 @@ from ...utils.logging import get_logger
 
 LOGGER = get_logger(__name__)
 
+
 class Step(ABC):
-    
     @abstractmethod
-    def run(self,*args,context:dict,**kwargs)->dict:
+    def run(self, *args, context: dict, **kwargs) -> dict:
         pass
 
+
 class Pipeline:
-    def __init__(self,steps:list[Step]):
+    def __init__(self, steps: list[Step]):
         self.steps = steps
         self.context = {}
-    def run(self,**kwargs)->dict:
+
+    def run(self, **kwargs) -> dict:
         self.context.update(kwargs)
         for step in self.steps:
             try:

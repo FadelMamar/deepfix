@@ -67,7 +67,7 @@ class ArtifactRepository:
                     ArtifactRecord.artifact_key == artifact_key,
                 )
             ).one_or_none()
-    
+
     def delete(self, run_id: str, artifact_key: str) -> bool:
         with self.session() as s:
             rec = s.exec(

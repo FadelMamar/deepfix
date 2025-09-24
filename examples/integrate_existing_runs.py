@@ -61,9 +61,9 @@ def example_dataset_metadata_loading():
                                                         run_id=None,
                                                         load_dataset_metadata=True,
                                                         dataset_name=dataset_name,
-                                                        load_checks=True,
-                                                        load_model_checkpoint=True,
-                                                        load_training=True,
+                                                        load_checks=False,
+                                                        load_model_checkpoint=False,
+                                                        load_training=False,
                                                         )
     context = artifact_loading_pipeline.run()
     print(context)
@@ -98,6 +98,10 @@ def example_checks():
     checks_pipeline.run(train_data=train_data,
                         test_data=val_data
                         )
+
+def example_dataset_analysis():
+
+    pass
 
 if __name__ == "__main__":
     fire.Fire()

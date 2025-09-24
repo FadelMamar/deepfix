@@ -18,18 +18,18 @@ setup_logging(level="INFO")
 logger = get_logger(__name__)
 
 
-def example_1():
+def example_1(run_id:str):
     """Example 1: Using the convenience function"""
     logger.info("Example 1: Using the convenience function")
     result = run_analysis(
-        run_id="07c04cc42fd9461e98f7eb0bf42444fb", tracking_uri="http://localhost:5000"
+        run_id=run_id, tracking_uri="http://localhost:5000"
     )
     logger.info(f"Analysis completed: {result.success}")
     logger.info(f"Artifacts loaded: {len(result.artifacts_loaded)}")
     logger.info(f"Execution time: {result.execution_time:.2f}s")
 
 
-def example_2(env_file:str):
+def example_2(env_file:str, run_id:str, dataset_name:str):
     """Example 2: Using full configuration"""
     load_dotenv(env_file,override=True)
 
@@ -38,7 +38,6 @@ def example_2(env_file:str):
     model_name = "openai/x-ai/grok-4-fast:free"  # Replace with your desired model name
     temperature = 0.7
     max_tokens = 1024
-    run_id = "07c04cc42fd9461e98f7eb0bf42444fb"
 
     config = AdvisorConfig(
         mlflow=MLflowConfig(
@@ -49,6 +48,9 @@ def example_2(env_file:str):
         artifacts=ArtifactConfig(load_checks=True, 
                                  load_training=True,
                                  cache_enabled=True,
+                                 load_model_checkpoint=True,
+                                 load_dataset_metadata=True,
+                                 dataset_name=dataset_name,
                                  sqlite_path="tmp/artifacts.db"
                                 ),
         intelligence=IntelligenceConfig(provider_name="llm",
