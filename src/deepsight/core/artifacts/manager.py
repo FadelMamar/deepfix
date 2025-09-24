@@ -125,7 +125,13 @@ class ArtifactsManager:
             self.repo.upsert(existing)
 
         return final_path
-        
+    
+    def get_mlflow_run_id(self, run_id: str,artifact_key:ArtifactPath) -> Optional[str]:
+        rec = self.repo.get(run_id, artifact_key.value)
+        if rec:
+            return rec.mlflow_run_id
+        return None
+
     def get_local_path(
         self,
         run_id: str,

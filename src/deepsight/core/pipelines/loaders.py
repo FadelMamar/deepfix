@@ -1,7 +1,7 @@
 from typing import Optional
 from .base import Step
 from ...utils.logging import get_logger
-from ..artifacts import ArtifactsManager,ArtifactPath,Artifacts
+from ..artifacts import ArtifactsManager,ArtifactPath,Artifacts,DatasetArtifacts,DeepchecksArtifacts
 from ...integrations import MLflowManager
 
 LOGGER = get_logger(__name__)
@@ -64,3 +64,35 @@ class LoadDatasetArtifact(LoadArtifact):
                         artifact_sqlite_path=artifact_sqlite_path,
                         run_id=dataset_name
                     )
+    def run(self,context:dict)->dict:
+        assert self.run_id is not None, "run_id must be set in MLflowManager"
+        LOGGER.info(f"Loading artifact: {self.artifact_key} for run_id: {self.run_id}")
+        # get artifacts
+        metadata_artifact = self._load_dataset_metadata()
+        deepchecks_artifact = self._load_deepchecks_artifacts()
+        arts = [metadata_artifact,deepchecks_artifact]
+        if "artifacts" in context.keys():
+            context['artifacts'].extend(arts)
+        else:
+            context['artifacts'] = arts
+        return context
+    
+    def _load_dataset_metadata(self)->DatasetArtifacts:
+        # Dataset metadata
+        artifact = self.artifact_mgr.load_artifact(
+            run_id=self.run_id,
+            artifact_key=ArtifactPath.DATASET,
+            download_if_missing=True
+        )
+        return artifact
+    
+    def _load_deepchecks_artifacts(self)->DeepchecksArtifacts:
+        mlflow_run_id = self.artifact_mgr.get_mlflow_run_id(self.run_id,ArtifactPath.DATASET)
+        if mlflow_run_id is None:
+            raise ValueError(f"MLflow run ID not found for dataset {self.run_id}")
+        artifact = self.artifact_mgr.load_artifact(
+            run_id=mlflow_run_id,
+            artifact_key=ArtifactPath.DEEPCHECKS,
+            download_if_missing=True
+        )
+        return artifact
